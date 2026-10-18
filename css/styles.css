@@ -1,0 +1,237 @@
+/* Jadwal Sholat. Font: Plus Jakarta Sans (SIL OFL 1.1), bundled locally so no request goes to Google. */
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:400;font-display:swap;src:url(../assets/fonts/plus-jakarta-sans-latin-400-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:500;font-display:swap;src:url(../assets/fonts/plus-jakarta-sans-latin-500-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:600;font-display:swap;src:url(../assets/fonts/plus-jakarta-sans-latin-600-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:700;font-display:swap;src:url(../assets/fonts/plus-jakarta-sans-latin-700-normal.woff2) format('woff2')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:800;font-display:swap;src:url(../assets/fonts/plus-jakarta-sans-latin-800-normal.woff2) format('woff2')}
+
+
+/* tokens: radius scale 24 (surfaces) / 12 (controls) / 999 (pills only) */
+:root{--toast-act:#86E3C6;--bg:#F4F1EA;--card:#FFFFFF;--ink:#14212B;--muted:#5B6773;--line:#E2DDD2;--accent:#1B6A57;--accent-soft:#E1EFE9;--r-lg:24px;--r-sm:12px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0D141B;--card:#16212B;--ink:#EEF1F3;--muted:#A3B0BB;--line:#26343F;--accent:#6BCBAE;--accent-soft:#16382F;--toast-act:#155443}}
+:root[data-theme="dark"]{--bg:#0D141B;--card:#16212B;--ink:#EEF1F3;--muted:#A3B0BB;--line:#26343F;--accent:#6BCBAE;--accent-soft:#16382F;--toast-act:#155443}
+*{box-sizing:border-box;margin:0}
+/* scrolling stays, scrollbars hidden everywhere so width never jumps between screens */
+html,body,*{scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar,*::-webkit-scrollbar{display:none;width:0;height:0}
+html,body{overflow-x:clip}
+body{background:var(--bg);color:var(--ink);font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:440px;margin:0 auto;min-height:100vh;padding-bottom:112px}
+.screen{display:none}.screen.on{display:block}
+
+/* sky header: gradient encodes time of day (dawn/day/dusk/night), not decoration */
+.hdr{position:relative;display:block;padding:16px 20px 24px;color:#fff;border-radius:0 0 var(--r-lg) var(--r-lg);text-align:left}
+.hdr{overflow:hidden;isolation:isolate;background:#14214A}
+.hdr>*:not(.scene){position:relative;z-index:1}
+.scene{position:absolute;inset:0;z-index:0;pointer-events:none}
+.scene>*{position:absolute;transition:opacity 1.2s ease}
+/* sky layers crossfade between periods */
+.bg{inset:0;opacity:0}
+.bg-dawn{background:linear-gradient(180deg,#2B3A67,#6E5A8C 55%,#C98A78)}
+.bg-day{background:linear-gradient(180deg,#1F67A3,#3E8CC6 65%,#6AAAD6)}
+.bg-dusk{background:linear-gradient(180deg,#33284F,#8E4660 60%,#C1704A)}
+.bg-night{background:linear-gradient(180deg,#070D1F,#14214A 70%,#22325F)}
+.sky-dawn .bg-dawn,.sky-day .bg-day,.sky-dusk .bg-dusk,.sky-night .bg-night{opacity:1}
+/* low warm light on the horizon at dawn and dusk */
+.glow{left:-20%;right:-20%;bottom:-60px;height:220px;opacity:0;background:radial-gradient(closest-side,rgba(255,196,140,.55),rgba(255,196,140,0));animation:breathe 9s ease-in-out infinite alternate}
+.sky-dawn .glow{opacity:.8}.sky-dusk .glow{opacity:1}
+@keyframes breathe{from{transform:scale(1)}to{transform:scale(1.08)}}
+/* stars twinkle at night, fade out toward dawn */
+.stars{inset:0 0 35% 0;opacity:0}
+.stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;animation:tw 3.2s ease-in-out infinite alternate}
+.stars i.b{width:3px;height:3px}
+@keyframes tw{from{opacity:.2}to{opacity:1}}
+.sky-night .stars{opacity:1}.sky-dawn .stars{opacity:.45}
+/* crescent moon: high at night, low and fading at dawn */
+.moon{top:120px;right:16px;opacity:0;transition:opacity 1.2s ease,transform 1.2s ease}
+.sky-night .moon{opacity:1;transform:translateY(0)}
+.sky-dawn .moon{opacity:.55;transform:translate(-40px,90px)}
+/* clouds drift slowly by day, tinted at dusk */
+.cloud{left:0;opacity:0;animation:drift linear infinite}
+.cloud.c1{top:222px;animation-duration:70s;animation-delay:-20s}
+.cloud.c2{top:240px;animation-duration:95s;animation-delay:-60s}
+.cloud.c3{top:-10px;animation-duration:120s;animation-delay:-5s}
+.sky-day .cloud{opacity:.55}.sky-dusk .cloud{opacity:.35}.sky-dawn .cloud{opacity:.15}
+.sky-dusk .cloud{filter:sepia(.5) saturate(1.6) hue-rotate(-25deg)}
+@keyframes drift{from{transform:translateX(-160px)}to{transform:translateX(480px)}}
+/* horizon with a mosque dome, darker as light fades */
+.hz{left:0;right:0;bottom:0;height:54px;width:100%;fill:#0B1A33;opacity:.16}
+.sky-dawn .hz{opacity:.35}.sky-dusk .hz{opacity:.4}.sky-night .hz{opacity:.6}
+#sun,#sunpath{transition:opacity .6s ease}
+@media (prefers-reduced-motion: reduce){.scene *{animation:none!important;transition:none!important}}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.loc{display:flex;align-items:center;gap:6px;border:0;background:rgba(0,0,0,.2);border-radius:999px;padding:0 14px 0 10px;min-height:44px;font-weight:600;font-size:15px;cursor:pointer}
+.loc small{font-weight:500;opacity:.85;font-size:13px}
+.hbtn{width:44px;height:44px;border-radius:999px;border:0;background:rgba(0,0,0,.2);display:grid;place-items:center;cursor:pointer}
+.hdr-date{margin-top:20px;font-size:15px;font-weight:600}
+.hdr-date span{display:block;font-size:13px;font-weight:500;opacity:.85;margin-top:2px}
+.hdr-next{margin-top:20px;font-size:15px;font-weight:600;opacity:.9}
+.hdr-time{font-size:64px;font-weight:800;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px}
+.hdr-count{margin-top:8px;font-size:15px;font-variant-numeric:tabular-nums;opacity:.9}
+.arc{margin-top:16px;width:100%;height:auto;display:block}
+.am{display:flex;align-items:center;gap:2px}.am img{margin:-6px 0}
+.arcmeta{display:flex;justify-content:space-between;font-size:12px;font-variant-numeric:tabular-nums;opacity:.9}
+
+/* compact week row: fits width, no clipped day */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:16px 16px 0}
+.wd{min-height:56px;border:0;background:transparent;border-radius:var(--r-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+.wd span{font-size:11px;color:var(--muted);font-weight:600}
+.wd b{font-size:16px}
+.wd[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.wd[aria-pressed="true"] span{color:var(--bg)}
+
+.card{margin:12px 16px 0;background:var(--card);border-radius:var(--r-lg);border:1px solid var(--line);overflow:hidden}
+.pr{display:flex;align-items:center;gap:12px;min-height:60px;padding:0 16px;border-top:1px solid var(--line)}
+.pr:first-child{border-top:0}
+.pr svg.ic{color:var(--muted);flex:none}
+.pr .nm{flex:1;font-weight:600;font-size:16px}
+.pr .nm small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.pr .tm{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.pr.past .nm,.pr.past .tm{color:var(--muted);font-weight:500}
+.pr.next{background:var(--accent-soft)}
+.pr.next .nm,.pr.next .tm,.pr.next svg.ic{color:var(--accent)}
+.foot{font-size:12px;color:var(--muted);text-align:center;padding:16px 24px 0;line-height:1.5}
+
+/* tab bar: the one elevated surface */
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;width:calc(100% - 32px);max-width:408px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);display:flex;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:5}
+.tab{flex:1;min-height:52px;border:0;background:transparent;color:var(--muted);border-radius:var(--r-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:600;font-size:12px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);background:var(--bg)}
+
+.head{padding:24px 20px 4px}
+.head h1{font-size:26px;font-weight:800}
+.head p{color:var(--muted);font-size:14px;margin-top:4px;line-height:1.5}
+.field{display:block;margin:16px 16px 0}
+.field span{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.field input{width:100%;min-height:48px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 14px;font:16px inherit;font-family:inherit}
+.gps{margin:12px 16px 0;width:calc(100% - 32px);min-height:48px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card);font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.status{font-size:13px;color:var(--muted);text-align:center;margin-top:8px;min-height:18px}
+.sec{padding:24px 20px 8px;font-size:14px;font-weight:700}
+.zone{display:flex;gap:8px;padding:0 16px}
+.zone button{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:14px;cursor:pointer}
+.zone button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.city{display:flex;width:100%;align-items:center;justify-content:space-between;min-height:56px;padding:0 16px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;font-size:16px;cursor:pointer}
+.city:first-child{border-top:0}
+.city small{color:var(--muted);font-size:13px}
+.city[aria-current="true"]{font-weight:700}
+.city[aria-current="true"] small{color:var(--accent);font-weight:600}
+.empty{padding:20px 16px;color:var(--muted);font-size:14px}
+
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 8px 0}
+.mhead h1{font-size:20px;font-weight:800;text-align:center}
+.mhead p{font-size:13px;color:var(--muted);text-align:center}
+.nav{width:44px;height:44px;border:0;background:transparent;border-radius:var(--r-sm);display:grid;place-items:center;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
+th{font-size:11px;color:var(--muted);font-weight:700;padding:12px 2px;text-align:center;border-bottom:1px solid var(--line)}
+td{text-align:center;padding:10px 2px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:700}
+tr.today td{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.soon{font-size:13px;color:var(--muted);text-align:center;padding:16px}
+/* ===== micro-interactions =====
+   timing: press <100ms, state 160-240ms, screen 280ms, spatial (sun) 1400ms */
+:root{--ease-out:cubic-bezier(.2,.8,.2,1);--ease-spring:cubic-bezier(.34,1.56,.64,1)}
+/* 1. press feedback on every tappable thing */
+button,.city,.wd{transition:transform 90ms var(--ease-out),background-color .2s ease,color .2s ease,border-color .2s ease;-webkit-tap-highlight-color:transparent}
+button:active,.city:active{transform:scale(.96)}
+/* 3. list rows enter with a short stagger */
+.pr{animation:rowin .32s var(--ease-out) both;animation-delay:calc(var(--i,0) * 35ms)}
+@keyframes rowin{from{opacity:0;transform:translateY(6px)}}
+/* 4. live progress toward the next prayer */
+.pr.next{position:relative;overflow:hidden}
+.pr.next .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);border-radius:0 3px 3px 0;transition:width 1s linear}
+/* 5. hero values change with a vertical slide */
+.swap{display:inline-block;animation:swapin .36s var(--ease-out)}
+@keyframes swapin{from{opacity:0;transform:translateY(10px)}}
+.digit{display:inline-block;animation:tick .28s var(--ease-out)}
+@keyframes tick{from{opacity:0;transform:translateY(-40%)}}
+/* 6. "almost time" state: chip appears once, no endless pulse */
+.soon-chip{display:none;margin-left:8px;padding:2px 8px;border-radius:999px;background:#FFE29A;color:#3B2A05;font-size:12px;font-weight:700;vertical-align:middle}
+.hdr.is-soon .soon-chip{display:inline-block;animation:pop .45s var(--ease-spring)}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+/* 7. week + tab selection: a pill slides to the chosen item */
+.week{position:relative}
+.week .ind,.tabbar .ind{position:absolute;border-radius:var(--r-sm);transition:transform .32s var(--ease-spring),width .32s var(--ease-spring);z-index:0}
+.week .ind{top:16px;height:56px;background:var(--ink)}
+.wd{position:relative;z-index:1;background:transparent!important}
+.wd[aria-pressed="true"]{color:var(--bg)}
+.tabbar{position:fixed}
+.tabbar .ind{top:6px;height:52px;background:var(--bg)}
+.tab{position:relative;z-index:1;background:transparent!important}
+.tab[aria-selected="true"] svg{animation:hop .35s var(--ease-spring)}
+@keyframes hop{40%{transform:translateY(-3px)}}
+/* 8. screens slide in from the direction you navigated */
+.screen.on{animation:scr .28s var(--ease-out)}
+.screen.on.from-right{--dx:24px}.screen.on.from-left{--dx:-24px}
+@keyframes scr{from{opacity:0;transform:translateX(var(--dx,0))}}
+/* 9. compact bar appears once the big header scrolls away */
+.mini{position:fixed;top:0;left:50%;width:100%;max-width:440px;z-index:6;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);font-weight:700;font-variant-numeric:tabular-nums;transform:translate(-50%,-100%);transition:transform .25s var(--ease-out)}
+.mini.show{transform:translate(-50%,0)}
+.mini small{color:var(--muted);font-weight:600}
+/* 10. toast with undo, sits above the tab bar */
+.toast{position:fixed;left:50%;bottom:96px;z-index:7;display:flex;align-items:center;justify-content:space-between;gap:12px;width:calc(100% - 32px);max-width:408px;padding:12px 8px 12px 16px;border-radius:var(--r-sm);background:var(--ink);color:var(--bg);font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2);transform:translate(-50%,24px);opacity:0;pointer-events:none;transition:transform .26s var(--ease-out),opacity .2s ease}
+.toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+.toast button{border:0;background:transparent;color:var(--toast-act);font-weight:700;min-height:36px;padding:0 10px;border-radius:8px;cursor:pointer}
+
+/* 11. search: clear button fades in, results fade on filter */
+.field{position:relative}
+.clear{position:absolute;right:4px;bottom:2px;width:44px;height:44px;border:0;background:transparent;color:var(--muted);display:grid;place-items:center;opacity:0;transform:scale(.6);pointer-events:none;transition:opacity .15s ease,transform .2s var(--ease-spring)}
+.field.has .clear{opacity:1;transform:scale(1);pointer-events:auto}
+.field input{padding-right:44px}
+input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+#cities>*{animation:rowin .22s var(--ease-out) both;animation-delay:calc(var(--i,0) * 25ms)}
+/* 12. city picked: check draws in before returning home */
+.city .chk{width:20px;height:20px;color:var(--accent)}
+.city .chk path{stroke-dasharray:24;stroke-dashoffset:24;animation:draw .3s var(--ease-out) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+/* 13. GPS button loading state */
+.gps[aria-busy="true"]{color:var(--muted);pointer-events:none}
+.spin{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+/* 14. month table slides in the direction of navigation */
+#days.from-right{animation:scr .26s var(--ease-out);--dx:20px}
+#days.from-left{animation:scr .26s var(--ease-out);--dx:-20px}
+#mname{display:inline-block}
+/* 15. theme switch: icon swaps with a spin; colors cross-fade */
+#theme svg{transition:transform .4s var(--ease-spring),opacity .2s ease}
+#theme .ic-sun{position:absolute;opacity:0;transform:rotate(-90deg) scale(.5)}
+#theme{position:relative}
+:root[data-theme="dark"] #theme .ic-moon{opacity:0;transform:rotate(90deg) scale(.5)}
+:root[data-theme="dark"] #theme .ic-sun{opacity:1;transform:none}
+body,.card,.tabbar,.city,.field input,.gps,.zone button{transition:background-color .3s ease,color .3s ease,border-color .3s ease}
+/* 16. connection status pill (real online/offline events) */
+.net{display:none;align-items:center;gap:6px;margin-top:10px;font-size:12px;font-weight:600;background:rgba(0,0,0,.25);padding:4px 10px;border-radius:999px;width:max-content}
+.net.show{display:flex;animation:pop .35s var(--ease-spring)}
+/* reduced motion: keep state changes, drop movement */
+@media (prefers-reduced-motion: reduce){
+ *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
+ .spin{animation:none}
+}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+
+.hdr-actions{display:flex;gap:8px;flex:none}
+.loc{min-width:0;max-width:100%}
+.loc #locname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdr-top{min-width:0}
+.hbtn.lang{width:auto;padding:0 12px 0 10px;gap:6px;display:flex;align-items:center;font-weight:700;font-size:13px;letter-spacing:.02em}
+.hijri{display:block;font-size:13px;font-weight:500;opacity:.85;margin-top:2px}
+.notice{display:flex;gap:10px;align-items:flex-start;margin:12px 16px 0;padding:12px 14px;border-radius:var(--r-sm);background:var(--card);border:1px solid var(--line);font-size:14px;line-height:1.45;color:var(--muted);animation:rowin .3s var(--ease-out)}
+.notice[hidden]{display:none}
+.notice svg{flex:none;margin-top:1px;color:var(--accent)}
+.linkbtn{border:0;background:transparent;padding:0;min-height:0;color:var(--accent);font:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.linkbtn:active{transform:none}
+.gpsnote{margin:8px 20px 0;font-size:12px;line-height:1.5;color:var(--muted);text-align:center}
+.privacy{display:flex;gap:8px;align-items:flex-start;justify-content:center;margin:20px 24px 0;font-size:12px;line-height:1.5;color:var(--muted)}
+.privacy svg{flex:none;margin-top:1px}
+
+/* app-only additions */
+.state{padding:20px 16px;color:var(--muted);font-size:14px;line-height:1.5;text-align:center}
+.pr.off{opacity:.55}
+.tomorrow{font-size:13px;font-weight:600;opacity:.85;margin-left:6px}
+.src{margin:8px 24px 0;font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+.src a{color:inherit}
+.install{display:none;margin:16px auto 0;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:14px;cursor:pointer}
+.install.show{display:block}
+.mcard{padding:0 4px;overflow:clip}
+.mcard thead th{position:sticky;top:0;z-index:1;background:var(--card)}

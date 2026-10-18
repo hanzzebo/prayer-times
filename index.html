@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jadwal Sholat</title>
+<meta name="description" content="Jadwal sholat resmi Kemenag untuk seluruh Indonesia. Offline, tanpa pelacakan.">
+<meta name="theme-color" content="#1F67A3">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jadwal Sholat">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/plus-jakarta-sans-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/styles.css">
+<script>
+/* apply saved theme before first paint to avoid a flash */
+try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')document.documentElement.dataset.theme=th}catch(e){}
+</script>
+</head>
+<body>
+<div class="app">
+
+<section class="screen on" id="home" data-i18n-label="aria.home">
+<div class="hdr sky-day" id="sky">
+<!-- sun, sunrise/sunset, cloud and moon art: Meteocons by Bas Milius, MIT License (assets/meteocons/LICENSE) -->
+<div class="scene" aria-hidden="true">
+<div class="bg bg-dawn"></div><div class="bg bg-day"></div><div class="bg bg-dusk"></div><div class="bg bg-night"></div>
+<div class="glow"></div>
+<div class="stars" id="stars"></div>
+<img class="moon" src="assets/meteocons/moon-waxing-crescent.svg" width="64" height="64" alt="">
+<img class="cloud c1" src="assets/meteocons/cloudy.svg" width="96" height="96" alt="">
+<img class="cloud c2" src="assets/meteocons/cloudy.svg" width="72" height="72" alt="">
+<img class="cloud c3" src="assets/meteocons/cloudy.svg" width="64" height="64" alt="">
+<svg class="hz" viewBox="0 0 400 54" preserveAspectRatio="xMidYMax slice"><path d="M0 54V40Q60 30 120 38T186 36H186V27Q200 9 214 27V36H222V16L225 10L228 16V36Q300 30 400 40V54Z"/></svg>
+</div>
+<div class="hdr-top">
+<button class="loc" data-go="city" id="locbtn">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+<span id="locname">…</span> <small id="loczone"></small>
+</button>
+<div class="hdr-actions">
+<button class="hbtn lang" id="lang"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span id="langcode">ID</span></button>
+<button class="hbtn" id="theme" data-i18n-label="aria.theme">
+<svg class="ic-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg>
+<svg class="ic-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+</button>
+</div>
+</div>
+<p class="hdr-date"><span id="today"></span><span class="hijri" id="hijri"></span></p>
+<p class="hdr-next"><span id="hnext"></span><span class="soon-chip" data-i18n="soon"></span></p>
+<p class="hdr-time"><span id="htime">--:--</span><span class="tomorrow" id="htmrw"></span></p>
+<p class="hdr-count"><span id="hin"></span> <span id="hcount">--:--:--</span></p>
+<p class="net" id="net" role="status"></p>
+<svg class="arc" viewBox="0 0 340 84" overflow="visible" role="img" id="arc">
+<path d="M10 76 Q170 -16 330 76" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2" stroke-dasharray="3 6"/>
+<path id="sunpath" d="M10 76 Q10 76 10 76" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="0" y1="76" x2="340" y2="76" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
+<image id="sun" href="assets/meteocons/clear-day.svg" x="-14" y="52" width="48" height="48"/>
+</svg>
+<div class="arcmeta"><span class="am"><img src="assets/meteocons/sunrise.svg" width="28" height="28" alt=""><span data-i18n="sunrise"></span>&nbsp;<span id="rise">--:--</span></span><span class="am"><img src="assets/meteocons/sunset.svg" width="28" height="28" alt=""><span data-i18n="sunset"></span>&nbsp;<span id="set">--:--</span></span></div>
+</div>
+
+<div class="week" role="group" id="week" data-i18n-label="aria.week"></div>
+
+<div class="notice" id="notice" hidden>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+<p><span data-i18n="notice.text"></span> <button class="linkbtn" data-go="city" data-i18n="notice.cta"></button></p>
+</div>
+
+<div class="card" id="list"></div>
+<p class="foot" data-i18n="foot"></p>
+<button class="install" id="install" type="button" data-i18n="install"></button>
+</section>
+
+<section class="screen" id="city" data-i18n-label="aria.city">
+<div class="head"><h1 data-i18n="city.title"></h1><p data-i18n="city.desc"></p></div>
+<label class="field"><span data-i18n="city.search"></span><input type="search" id="q" autocomplete="off" data-i18n-ph="city.ph"><button class="clear" id="qclear" type="button" data-i18n-label="city.clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>
+<button class="gps" id="gps"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"/></svg><span id="gpslabel" data-i18n="gps.btn"></span></button>
+<p class="gpsnote" data-i18n="gps.note"></p>
+<p class="status" id="gpsmsg" role="status"></p>
+<p class="sec" data-i18n="city.zone"></p>
+<div class="zone" role="group" id="zones" data-i18n-label="city.zone">
+<button data-z="WIB" aria-pressed="false">WIB</button><button data-z="WITA" aria-pressed="false">WITA</button><button data-z="WIT" aria-pressed="false">WIT</button>
+</div>
+<div class="card" id="cities"></div>
+<p class="privacy"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><span data-i18n="privacy"></span></p>
+</section>
+
+<section class="screen" id="month" data-i18n-label="aria.month">
+<div class="mhead">
+<button class="nav" id="prev" data-i18n-label="month.prev"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+<div><h1 id="mname"></h1><p id="mloc"></p></div>
+<button class="nav" id="next" data-i18n-label="month.next"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+</div>
+<div class="card mcard"><table><thead><tr><th scope="col" data-i18n="month.date"></th><th scope="col" data-i18n="pr.imsak"></th><th scope="col" data-i18n="pr.subuh"></th><th scope="col" data-i18n="pr.dzuhur"></th><th scope="col" data-i18n="pr.ashar"></th><th scope="col" data-i18n="pr.maghrib"></th><th scope="col" data-i18n="pr.isya"></th></tr></thead><tbody id="days"></tbody></table></div>
+<p class="src" data-i18n="source"></p>
+</section>
+</div>
+
+<div class="mini" id="mini" aria-hidden="true"><span id="mname2"></span><small id="mcount"></small></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span id="tmsg"></span><button id="tact" type="button"></button></div>
+<nav class="tabbar" role="tablist" data-i18n-label="aria.nav"><span class="ind" aria-hidden="true"></span>
+<button class="tab" role="tab" aria-selected="true" data-go="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span data-i18n="tab.home"></span></button>
+<button class="tab" role="tab" aria-selected="false" data-go="month"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span data-i18n="tab.month"></span></button>
+<button class="tab" role="tab" aria-selected="false" data-go="city"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span data-i18n="tab.city"></span></button>
+</nav>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
