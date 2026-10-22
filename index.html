@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jadwal Sholat</title>
 <meta name="description" content="Jadwal sholat resmi Kemenag untuk seluruh Indonesia. Offline, tanpa pelacakan.">
-<meta name="theme-color" content="#1F67A3">
+<meta name="theme-color" content="#1F67A3" id="themecolor">
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -77,32 +77,35 @@ try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')documen
 </section>
 
 <section class="screen" id="city" data-i18n-label="aria.city">
-<div class="head"><h1 data-i18n="city.title"></h1><p data-i18n="city.desc"></p></div>
-<label class="field"><span data-i18n="city.search"></span><input type="search" id="q" autocomplete="off" data-i18n-ph="city.ph"><button class="clear" id="qclear" type="button" data-i18n-label="city.clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>
-<button class="gps" id="gps"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"/></svg><span id="gpslabel" data-i18n="gps.btn"></span></button>
-<p class="gpsnote" data-i18n="gps.note"></p>
-<p class="status" id="gpsmsg" role="status"></p>
-<p class="sec" data-i18n="city.zone"></p>
+<header class="pagebar"><h1 data-i18n="city.title"></h1><p id="curcity"></p></header>
+<div class="cwrap">
+<label class="field"><span class="sr" data-i18n="city.search"></span><svg class="fico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="q" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" data-i18n-ph="city.ph"><button class="clear" id="qclear" type="button" data-i18n-label="city.clear"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>
 <div class="zone" role="group" id="zones" data-i18n-label="city.zone">
 <button data-z="WIB" aria-pressed="false">WIB</button><button data-z="WITA" aria-pressed="false">WITA</button><button data-z="WIT" aria-pressed="false">WIT</button>
 </div>
-<div class="card" id="cities"></div>
-<p class="privacy"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><span data-i18n="privacy"></span></p>
+<p class="count" id="count" aria-live="polite"></p>
+<div class="clist" id="cities"></div>
+<button class="gps" id="gps"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8z"/></svg><span id="gpslabel" data-i18n="gps.btn"></span></button>
+<p class="gpsnote" id="gpsmsg" role="status" data-i18n="gps.note"></p>
+<p class="privacy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg><span data-i18n="privacy"></span></p>
+</div>
 </section>
 
 <section class="screen" id="month" data-i18n-label="aria.month">
-<div class="mhead">
-<button class="nav" id="prev" data-i18n-label="month.prev"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+<header class="pagebar mbar">
+<button class="nav" id="prev" data-i18n-label="month.prev"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
 <div><h1 id="mname"></h1><p id="mloc"></p></div>
-<button class="nav" id="next" data-i18n-label="month.next"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
-</div>
+<button class="nav" id="next" data-i18n-label="month.next"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+</header>
 <div class="card mcard"><table><thead><tr><th scope="col" data-i18n="month.date"></th><th scope="col" data-i18n="pr.imsak"></th><th scope="col" data-i18n="pr.subuh"></th><th scope="col" data-i18n="pr.dzuhur"></th><th scope="col" data-i18n="pr.ashar"></th><th scope="col" data-i18n="pr.maghrib"></th><th scope="col" data-i18n="pr.isya"></th></tr></thead><tbody id="days"></tbody></table></div>
 <p class="src" data-i18n="source"></p>
 </section>
 </div>
 
+<div class="safe-top" aria-hidden="true"></div>
+<div class="fade-bottom" aria-hidden="true"></div>
 <div class="mini" id="mini" aria-hidden="true"><span id="mname2"></span><small id="mcount"></small></div>
-<div class="toast" id="toast" role="status" aria-live="polite"><span id="tmsg"></span><button id="tact" type="button"></button></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><svg class="tico" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg><span id="tmsg"></span><button id="tact" type="button"></button></div>
 <nav class="tabbar" role="tablist" data-i18n-label="aria.nav"><span class="ind" aria-hidden="true"></span>
 <button class="tab" role="tab" aria-selected="true" data-go="home"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span data-i18n="tab.home"></span></button>
 <button class="tab" role="tab" aria-selected="false" data-go="month"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span data-i18n="tab.month"></span></button>

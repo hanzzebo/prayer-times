@@ -144,6 +144,13 @@ function moveSun(to) {
   (function step(now) { const k = Math.min(1, (now - start) / dur), e = 1 - Math.pow(1 - k, 3); sunT = from + (to - from) * e; drawSun(sunT); if (k < 1) sunAnim = requestAnimationFrame(step); })(start);
 }
 
+const SKY_TOP = { dawn: '#2B3A67', day: '#1F67A3', dusk: '#33284F', night: '#070D1F' };
+function setPhaseClass(ph) {
+  $('#sky').className = 'hdr sky-' + ph;
+  document.body.classList.remove('ph-dawn', 'ph-day', 'ph-dusk', 'ph-night');
+  document.body.classList.add('ph-' + ph);
+  $('#themecolor').setAttribute('content', SKY_TOP[ph]);
+}
 let lastCount = '';
 function tick(force) {
   if (!city) return;
@@ -153,7 +160,7 @@ function tick(force) {
   const T = state.times, s = z.s;
 
   const ph = SKY_OVERRIDE && /^(dawn|day|dusk|night)$/.test(SKY_OVERRIDE) ? SKY_OVERRIDE : phaseOf(s);
-  if (ph !== state.phase) { state.phase = ph; $('#sky').className = 'hdr sky-' + ph; }
+  if (ph !== state.phase) { state.phase = ph; setPhaseClass(ph); }
   const rise = sec(T[2]), set = sec(T[5]), up = ph !== 'night' && s >= rise - 1800 && s <= set + 1800;
   $('#sun').style.opacity = up ? 1 : 0; $('#sunpath').style.opacity = up ? 1 : 0;
   moveSun(Math.min(1, Math.max(0, (s - rise) / (set - rise))));
@@ -250,10 +257,17 @@ function drawCities() {
   if (!CITIES.length) { $('#cities').innerHTML = `<p class="empty">${t('city.loadfail')}</p>`; return; }
   const raw = $('#q').value, q = norm(raw.trim());
   $('#q').closest('.field').classList.toggle('has', !!raw);
-  const list = CITIES.filter((c) => (q ? norm(c.n).includes(q) || norm(c.p).includes(q) : c.z === zoneFilter));
-  $('#cities').innerHTML = list.length
-    ? list.map((c, i) => `<button class="city" style="--i:${Math.min(i, 12)}" aria-current="${c.id === city.id}" data-id="${c.id}"><span>${esc(c.n)}</span><small>${c.id === city.id && !estimated ? t('city.active') : esc(c.p) + (q ? ' · ' + c.z : '')}</small></button>`).join('')
-    : `<p class="empty">${t('city.empty', { q: esc(raw) })}</p>`;
+  const list = CITIES.filter((c) => (q ? norm(c.n).includes(q) || norm(c.p).includes(q) : c.z === zoneFilter))
+    .sort((a, b) => a.p.localeCompare(b.p, 'id') || a.n.localeCompare(b.n, 'id'));
+  $('#zones').classList.toggle('dim', !!q); // search covers every zone
+  $('#count').textContent = q ? t(list.length === 1 ? 'city.result1' : 'city.results', { n: list.length }) : t('city.count', { n: list.length, z: zoneFilter });
+  let html = '', prov = '', i = 0;
+  for (const c of list) {
+    if (c.p !== prov) { prov = c.p; html += `<div class="grp">${esc(prov)}${q ? ' · ' + c.z : ''}</div>`; }
+    const me = c.id === city.id;
+    html += `<button class="city" style="--i:${Math.min(i++, 12)}" aria-current="${me}" data-id="${c.id}"><span>${esc(c.n)}</span><small>${me ? t('city.active') : ''}</small></button>`;
+  }
+  $('#cities').innerHTML = list.length ? html : `<p class="empty">${t('city.empty', { q: esc(raw) })}</p>`;
 }
 function setZone(z) { zoneFilter = z; $$('#zones button').forEach((x) => x.setAttribute('aria-pressed', x.dataset.z === z)); }
 function renderLoc(animate) {
@@ -262,6 +276,7 @@ function renderLoc(animate) {
   if (animate) { restart($('#locname'), 'swap'); restart($('#loczone'), 'swap'); }
   $('#locbtn').setAttribute('aria-label', t('aria.loc', { c: shortName(city.n), z: city.z }));
   $('#mloc').textContent = `${shortName(city.n)} · ${city.z}`;
+  $('#curcity').textContent = t('city.current', { c: city.n, p: city.p, z: city.z });
   $('#notice').hidden = !estimated;
 }
 function applyCity(c, { save = true, animate = true } = {}) {
@@ -277,13 +292,13 @@ function pickCity(c) {
   if (c.id === city.id && !estimated) return go('home');
   const prev = { c: city, est: estimated };
   setTimeout(() => {
-    applyCity(c); go('home');
+    applyCity(c); go('home'); restart($('#locbtn'), 'pulse');
     toast(t('t.city', { c: shortName(c.n) }), { label: t('undo'), fn: () => { applyCity(prev.c, { save: !prev.est }); estimated = prev.est; renderLoc(true); if (!prev.est) store.set('city', prev.c.id); } });
   }, RM ? 0 : 380);
 }
 $('#q').addEventListener('input', drawCities);
 $('#qclear').addEventListener('click', () => { $('#q').value = ''; drawCities(); $('#q').focus(); });
-$('#zones').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; setZone(b.dataset.z); $('#q').value = ''; drawCities(); buzz(6); });
+$('#zones').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; setZone(b.dataset.z); $('#q').value = ''; drawCities(); $('#cities').scrollTop = 0; buzz(6); });
 $('#cities').addEventListener('click', (e) => {
   const b = e.target.closest('.city'); if (!b) return;
   const s = b.querySelector('small'); if (s) s.outerHTML = CHK;
@@ -302,17 +317,18 @@ function nearest(lat, lon) {
   return best;
 }
 let gpsBusy = false;
+function gpsMsg(text) { const m = $('#gpsmsg'); m.textContent = text || t('gps.note'); m.classList.toggle('msg', !!text); }
 $('#gps').addEventListener('click', () => {
   if (gpsBusy) return;
   const g = $('#gps'), icon = g.querySelector('svg');
   const done = (msg) => {
     gpsBusy = false; g.removeAttribute('aria-busy'); const sp = g.querySelector('.spin'); if (sp) sp.remove();
-    icon.style.display = ''; $('#gpslabel').textContent = t('gps.btn'); $('#gpsmsg').textContent = msg;
+    icon.style.display = ''; $('#gpslabel').textContent = t('gps.btn'); gpsMsg(msg);
   };
   if (!('geolocation' in navigator)) return done(t('gps.unavail'));
   gpsBusy = true; g.setAttribute('aria-busy', 'true'); icon.style.display = 'none';
   g.insertAdjacentHTML('afterbegin', '<i class="spin" aria-hidden="true"></i>');
-  $('#gpslabel').textContent = t('gps.busy'); $('#gpsmsg').textContent = '';
+  $('#gpslabel').textContent = t('gps.busy'); gpsMsg(t('gps.busy'));
   navigator.geolocation.getCurrentPosition((pos) => {
     const c = nearest(pos.coords.latitude, pos.coords.longitude);
     if (!c) return done(t('gps.unavail'));
@@ -355,9 +371,10 @@ function go(id) {
   cur = id;
   $$('.screen').forEach((s) => { s.classList.remove('on', 'from-right', 'from-left'); if (s.id === id) s.classList.add('on', dir); });
   $$('.tab').forEach((x) => x.setAttribute('aria-selected', x.dataset.go === id));
+  document.body.classList.toggle('on-city', id === 'city');
   placeTab(); window.scrollTo(0, 0); $('#mini').classList.remove('show');
   if (id === 'home') requestAnimationFrame(placeWeek);
-  if (id === 'city') { setZone(city.z); $('#q').value = ''; drawCities(); }
+  if (id === 'city') { setZone(city.z); $('#q').value = ''; gpsMsg(); drawCities(); const box = $('#cities'), me = box.querySelector('.city[aria-current="true"]'); box.scrollTop = me ? me.offsetTop - box.clientHeight / 2 + me.offsetHeight / 2 : 0; }
   if (id === 'month') { const z = zoned(city.z); mView = { y: z.y, m: z.m }; drawMonth().then(() => { const r = $('#days .today'); if (r) r.scrollIntoView({ block: 'center' }); }); }
 }
 $$('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
@@ -388,7 +405,7 @@ function applyLang() {
   $('#arc').setAttribute('aria-label', t('aria.arc'));
   $('#hin').textContent = t('in');
   if (!$('#gps').hasAttribute('aria-busy')) $('#gpslabel').textContent = t('gps.btn');
-  $('#gpsmsg').textContent = '';
+  gpsMsg();
   net();
   if (city) { renderLoc(false); drawCities(); if (state.today) renderStatic(); state.next = -1; tick(true); drawMonth(); }
   requestAnimationFrame(placeTab);

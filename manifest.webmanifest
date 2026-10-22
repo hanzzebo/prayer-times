@@ -7,7 +7,6 @@
   "scope": "./",
   "id": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0D141B",
   "theme_color": "#1F67A3",
   "categories": ["lifestyle", "utilities"],

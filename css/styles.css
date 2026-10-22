@@ -104,7 +104,7 @@ button{font-family:inherit;color:inherit}
 .head p{color:var(--muted);font-size:14px;margin-top:4px;line-height:1.5}
 .field{display:block;margin:16px 16px 0}
 .field span{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
-.field input{width:100%;min-height:48px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 14px;font:16px inherit;font-family:inherit}
+.field input{width:100%;min-height:48px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 14px;font-family:inherit;font-size:16px}
 .gps{margin:12px 16px 0;width:calc(100% - 32px);min-height:48px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card);font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
 .status{font-size:13px;color:var(--muted);text-align:center;margin-top:8px;min-height:18px}
 .sec{padding:24px 20px 8px;font-size:14px;font-weight:700}
@@ -235,3 +235,130 @@ body,.card,.tabbar,.city,.field input,.gps,.zone button{transition:background-co
 .install.show{display:block}
 .mcard{padding:0 4px;overflow:clip}
 .mcard thead th{position:sticky;top:0;z-index:1;background:var(--card)}
+
+/* ===== mobile shell (v2): safe areas, page bars, tab bar, location picker ===== */
+/* iOS zooms into any input under 16px, so the search field stays at 16px */
+:root{--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sky-top:#1F67A3;--sky-bot:#3E8CC6;--bar-bg:#FFFFFF;--bar-line:rgba(20,33,43,.14)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bar-bg:#26394A;--bar-line:rgba(255,255,255,.14)}}
+:root[data-theme="dark"]{--bar-bg:#26394A;--bar-line:rgba(255,255,255,.14)}
+body.ph-dawn{--sky-top:#2B3A67;--sky-bot:#5E5089}
+body.ph-day{--sky-top:#1F67A3;--sky-bot:#3E8CC6}
+body.ph-dusk{--sky-top:#33284F;--sky-bot:#7A4163}
+body.ph-night{--sky-top:#070D1F;--sky-bot:#14214A}
+
+.app{padding-bottom:calc(112px + var(--sab))}
+.hdr{padding-top:calc(var(--sat) + 12px)}
+/* keeps the status bar readable when content scrolls under it */
+.safe-top{position:fixed;top:0;left:0;right:0;height:var(--sat);background:var(--sky-top);z-index:9;pointer-events:none;transition:background-color .6s ease}
+
+.pagebar{position:relative;color:#fff;background:linear-gradient(180deg,var(--sky-top),var(--sky-bot));padding:calc(var(--sat) + 16px) 20px 18px;border-radius:0 0 var(--r-lg) var(--r-lg)}
+.pagebar h1{font-size:24px;font-weight:800;line-height:1.2}
+.pagebar p{font-size:14px;opacity:.88;margin-top:2px}
+.mbar{display:flex;align-items:center;justify-content:space-between;padding-left:6px;padding-right:6px}
+.mbar>div{text-align:center}.mbar h1{font-size:20px}
+.mbar .nav{color:#fff}
+.mcard{margin-top:12px}
+.mcard thead th{top:var(--sat)}
+
+.mini{top:0;padding:calc(var(--sat) + 10px) 20px 12px;background:linear-gradient(180deg,var(--sky-top),var(--sky-bot));color:#fff;border-bottom:0;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.mini small{color:rgba(255,255,255,.88)}
+
+/* tab bar: its own raised surface so it never blends into the list */
+.tabbar{bottom:calc(10px + var(--sab));background:var(--bar-bg);border:1px solid var(--bar-line);box-shadow:0 12px 32px rgba(0,0,0,.30),0 2px 6px rgba(0,0,0,.12)}
+.tabbar .ind{background:var(--accent-soft)}
+.tab[aria-selected="true"]{color:var(--accent)}
+.fade-bottom{position:fixed;left:0;right:0;bottom:0;height:calc(96px + var(--sab));background:linear-gradient(to top,var(--bg) 55%,transparent);pointer-events:none;z-index:4}
+
+/* toast: top banner, where it is seen right after navigating */
+.toast{top:calc(var(--sat) + 10px);bottom:auto;padding:12px 8px 12px 14px;transform:translate(-50%,-140%);box-shadow:0 12px 32px rgba(0,0,0,.30)}
+.toast.show{transform:translate(-50%,0)}
+.toast #tmsg{flex:1}
+.tico{flex:none;color:var(--toast-act)}
+.loc.pulse{animation:locpulse .9s var(--ease-out)}
+@keyframes locpulse{0%{box-shadow:0 0 0 0 rgba(255,255,255,.55)}100%{box-shadow:0 0 0 14px rgba(255,255,255,0)}}
+
+/* location screen: everything fits one screen, the list scrolls inside its own box */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+body.on-city .app{padding-bottom:0}
+#city.on{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.cwrap{display:flex;flex-direction:column;flex:1;min-height:0;padding:14px 16px calc(92px + var(--sab))}
+.cwrap .field{margin:0}
+.fico{position:absolute;left:14px;top:15px;color:var(--muted);pointer-events:none}
+.cwrap .field input{padding-left:42px}
+.cwrap .clear{bottom:2px}
+.cwrap .zone{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm)}
+.cwrap .zone button{border:0;border-radius:8px;min-height:40px;background:transparent}
+.cwrap .zone button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.zone.dim button[aria-pressed="true"]{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.count{font-size:12px;font-weight:600;color:var(--muted);margin:12px 4px 6px}
+.clist{flex:1;min-height:150px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg)}
+.grp{position:sticky;top:0;z-index:1;padding:8px 16px;font-size:12px;font-weight:700;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--line)}
+.clist .city{border-top:0;border-bottom:1px solid var(--line);min-height:52px}
+.clist .city:last-child{border-bottom:0}
+.clist .empty{padding:20px 16px}
+.cwrap .gps{margin:12px 0 0;width:100%;min-height:46px}
+.cwrap .gpsnote{margin:6px 4px 0;min-height:18px}
+.cwrap .gpsnote.msg{color:var(--ink);font-weight:600}
+.cwrap .privacy{margin:6px 4px 0;justify-content:center}
+@media (max-height:640px){.cwrap .privacy{display:none}}
+.clist{position:relative}
+@media (max-height:720px){
+ .pagebar{padding-top:calc(var(--sat) + 10px);padding-bottom:12px}
+ .pagebar h1{font-size:21px}
+ .cwrap{padding-top:10px}
+ .cwrap .gpsnote:not(.msg){display:none}
+ .cwrap .gps{margin-top:8px;min-height:44px}
+ .count{margin:8px 4px 4px}
+}
+
+/* ===== responsive states: very narrow phones, short (landscape) screens, tablet and desktop ===== */
+:root{--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
+.app{padding-left:var(--sal);padding-right:var(--sar)}
+
+/* very narrow phones (Galaxy Fold cover screen, small Androids): keep the city name readable */
+@media (max-width:340px){
+ .hdr{padding-left:14px;padding-right:14px}
+ .hbtn.lang #langcode{display:none}
+ .hbtn.lang{width:44px;padding:0;justify-content:center}
+ #loczone{display:none}
+ .hdr-time{font-size:52px}
+ .card,.notice{margin-left:8px;margin-right:8px}
+ .week{padding-left:8px;padding-right:8px;gap:2px}
+ .mcard table{font-size:11.5px}
+ .mcard th{font-size:10px;padding:10px 0}
+ .mcard td{padding:9px 0}
+ .cwrap{padding-left:10px;padding-right:10px}
+}
+
+/* short screens (phones in landscape): the City screen scrolls as a page, the list keeps a usable height */
+@media (max-height:520px){
+ #city.on{height:auto}
+ .cwrap{flex:none}
+ .clist{flex:none;height:max(220px,62vh)}
+ .cwrap .gpsnote:not(.msg){display:block}
+ .hdr-time{font-size:48px}
+ .hdr-date,.hdr-next{margin-top:12px}
+ .arc{margin-top:8px}
+}
+
+/* tablet, desktop and landscape phones: two columns instead of a stretched phone strip */
+@media (min-width:760px){
+ .app{max-width:1040px;padding-left:calc(24px + var(--sal));padding-right:calc(24px + var(--sar))}
+ #home.on{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:24px;align-items:start}
+ #home .hdr{grid-column:1;grid-row:1 / span 6;position:sticky;top:calc(var(--sat) + 16px);margin-top:calc(var(--sat) + 16px);padding-top:16px;border-radius:var(--r-lg)}
+ #home>:not(.hdr){grid-column:2}
+ #home .week{padding:calc(var(--sat) + 16px) 0 0}
+ #home .week .ind{top:calc(var(--sat) + 16px)}
+ #home .card,#home .notice{margin-left:0;margin-right:0}
+ .mini{display:none}
+ #month .pagebar,#city .pagebar{margin-top:calc(var(--sat) + 16px);padding-top:16px;border-radius:var(--r-lg)}
+ #month.on,#city.on{max-width:720px;margin:0 auto}
+ .mcard{margin-left:0;margin-right:0}
+ .mcard thead th{top:0}
+ .cwrap{padding-left:0;padding-right:0}
+ .fade-bottom{height:calc(80px + var(--sab))}
+}
+@media (min-width:760px) and (max-height:520px){
+ #home .hdr{position:relative;top:auto}
+ #city.on{height:auto}
+}
