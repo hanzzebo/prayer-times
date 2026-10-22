@@ -1,61 +1,35 @@
 # Jadwal Sholat
 
-Prayer schedule PWA for all of Indonesia (WIB, WITA, WIT). Official Kemenag times, works offline, no tracking, no server. Hosted on GitHub Pages.
+Jadwal Sholat is a progressive web app that shows daily prayer times for every regency and city (kabupaten/kota) in Indonesia, across all three time zones: WIB, WITA and WIT. The times come from the official schedule published by the Ministry of Religious Affairs (Kementerian Agama). The app is a static site hosted on GitHub Pages, so it has no backend server of its own.
 
-## Deploy
+## Architecture
 
-1. Create a new **public** GitHub repository (for example `jadwal-sholat`). The default branch must be `main`.
-2. Upload everything in this folder, including the hidden `.github` folder.
-   - With git: `git init && git add . && git commit -m "init" && git branch -M main && git remote add origin https://github.com/<you>/<repo>.git && git push -u origin main`
-   - Using GitHub's web "Upload files" page, the `.github` folder may get skipped because it is hidden. If so, create `.github/workflows/deploy.yml` by hand and paste in the file's contents.
-3. Go to **Settings → Pages**. Under "Build and deployment", set **Source** to **GitHub Actions**.
-4. Go to **Settings → Actions → General → Workflow permissions** and select **Read and write permissions**. The workflow commits the fetched schedule data back to the repo.
-5. Go to **Actions → Build and deploy → Run workflow**. A push also triggers it.
-   - **The first run takes about 25–40 minutes.** It downloads 12 months of schedules for every kabupaten/kota (about 518 cities, roughly 6,200 small requests, paced to be polite to the API). Then it looks up each city's coordinates for the optional GPS button (1 request per second). Later runs only fetch what is missing and finish in a minute or two.
-6. Open `https://<you>.github.io/<repo>/` on your phone.
-   - **Android (Chrome):** tap "Install on home screen" in the app, or use the menu → Install app.
-   - **iPhone (Safari):** Share → Add to Home Screen.
+The app never calls a prayer-time API while it is running. Instead, a scheduled GitHub Actions workflow named "Build and deploy" runs the script `scripts/fetch-data.mjs`, which downloads the official schedule from `api.myquran.com` and stores it as static JSON files. The list of cities, with their province, time zone and coordinates, is saved in `data/cities.json`. Each city's schedule for a year is saved in `data/<year>/<cityId>.json`, with one entry per day containing the times for imsak, subuh, terbit, dzuhur, ashar, maghrib and isya.
 
-The workflow also runs on the 1st of every month. From November on, it fetches the next year's schedule, so the app keeps working past New Year.
+The workflow commits any new data files back to the repository and then publishes the site to GitHub Pages. It runs on every push to `main` and on the first day of each month. The script keeps files that already exist, so later runs only fetch what is missing. From November onward, it also fetches the following year's schedule, so the app keeps working after New Year.
 
-## How it works
+City coordinates are looked up once, during the data build, through OpenStreetMap's Nominatim service. They are used only for the optional location-based city match.
 
-- **No runtime API.** A GitHub Action downloads the official Kemenag schedule from `api.myquran.com` into static JSON (`data/<year>/<cityId>.json`), commits it, and deploys. The app only reads those files.
-- **Offline.** A service worker caches the app and every schedule you open. After the first visit, the app works without internet.
-- **Correct timezone.** Countdown and "next prayer" use the selected city's zone (WIB/WITA/WIT), not the phone's, so viewing Jakarta from Bali is still right.
-- **Location without permission.** On first launch, the city is estimated from the device's time zone setting, with a note asking you to confirm. GPS is optional: permission is only requested when you tap "Use my location". The nearest city is picked on the device, and the coordinates are discarded.
-- **Privacy.** No analytics, no cookies, no third-party requests at runtime. The font and icons are bundled. Settings (city, language, theme) live only in the phone's local storage.
-- **Languages.** Bahasa Indonesia and English. The default follows the phone's language; switch with the globe button.
+## Offline support
 
-## Preview the sky scenes
+A service worker (`sw.js`) caches the application shell, including the HTML, styles, scripts, icons and fonts. It also caches each city's schedule the first time that schedule is opened. After the first visit, the app works without an internet connection. Each deployment stamps a new build identifier into the service worker, which prompts installed copies of the app to offer the new version.
 
-The header sky follows the real time of day. To preview a scene without waiting, add `?sky=dawn`, `?sky=day`, `?sky=dusk` or `?sky=night` to the URL.
+## Time zones
 
-## Run locally
+The countdown and the "next prayer" indicator are calculated in the selected city's time zone, not in the time zone of the device. For example, a user in Bali who selects Jakarta still sees the correct times for Jakarta.
 
-```bash
-python3 -m http.server 8080
-# open http://localhost:8080/
-```
+## Location and privacy
 
-The `data/` folder is empty until the workflow has run. To fetch data locally instead (takes a while), run:
+On first launch, the app estimates the user's city from the device's time zone setting and asks the user to confirm it. Precise location is optional. The browser only asks for location permission when the user taps "Use my location". The nearest city is then chosen on the device itself, and the coordinates are discarded.
 
-```bash
-node scripts/fetch-data.mjs          # needs Node 18+
-YEARS=2026 GEOCODE=0 node scripts/fetch-data.mjs   # one year, skip coordinates
-```
+The app does not use analytics, cookies or any third-party requests at runtime. The font and weather icons are bundled with the site. User settings, such as the selected city, language and theme, are stored only in the browser's local storage on the device.
 
-## Troubleshooting
+## Interface
 
-- **The workflow fails at "Commit new data" with a permission error:** check step 4 (Read and write permissions).
-- **The deploy step fails:** check step 3 (Pages source set to GitHub Actions).
-- **Some cities are missing:** the API may have rate-limited or failed for a few requests. Run the workflow again; it only fetches what is missing.
-- **The phone shows an old version:** reopen the app. A "new version available" prompt appears; tap Reload.
+The app is available in Bahasa Indonesia and English. It follows the device's language by default, and the user can switch languages with the globe button. The sky illustration in the header changes with the real time of day. A specific scene can be previewed by adding `?sky=dawn`, `?sky=day`, `?sky=dusk` or `?sky=night` to the URL.
 
-## Data and credits
+The Hijri date is calculated by the browser using the Umm al-Qura calendar. It is an estimate, and it may differ by one day from Indonesia's official date, which is set by the government's sidang isbat.
 
-- **Prayer times:** Kementerian Agama RI (Bimas Islam), served by [api.myquran.com](https://api.myquran.com), a community-run service, not an official government API.
-- **City coordinates:** © OpenStreetMap contributors (Nominatim), used only for the optional GPS city match.
-- **Weather icons:** [Meteocons](https://github.com/basmilius/meteocons) by Bas Milius, MIT License (`assets/meteocons/LICENSE`).
-- **Font:** [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans), SIL Open Font License 1.1 (`assets/fonts/OFL.txt`).
-- **Hijri date:** computed by the browser using the Umm al-Qura calendar. It is an estimate and can differ by a day from Indonesia's official date (sidang isbat).
+## Data sources and credits
+
+Prayer times come from the Ministry of Religious Affairs (Bimas Islam) and are served by [api.myquran.com](https://api.myquran.com). That service is run by the community and is not an official government API. City coordinates are © OpenStreetMap contributors, obtained through Nominatim. The weather icons are [Meteocons](https://github.com/basmilius/meteocons) by Bas Milius, released under the MIT License (see `assets/meteocons/LICENSE`). The font is [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans), released under the SIL Open Font License 1.1 (see `assets/fonts/OFL.txt`).
