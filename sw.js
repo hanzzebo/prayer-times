@@ -1,5 +1,6 @@
 // Offline support. All paths are relative so the app works under https://<user>.github.io/<repo>/.
-// __BUILD__ is replaced on every deploy, which makes phones download the new version.
+// __BUILD__ is replaced on deploy with a hash of the app files, so it only changes when the app does.
+// A new version takes over straight away and is used the next time the app is opened.
 const VERSION = '__BUILD__';
 const SHELL = `shell-${VERSION}`;
 const DATA = 'data-v1';
@@ -24,11 +25,7 @@ const SHELL_FILES = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)));
-});
-
-self.addEventListener('message', (e) => {
-  if (e.data === 'skipWaiting') self.skipWaiting();
+  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(SHELL_FILES)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {

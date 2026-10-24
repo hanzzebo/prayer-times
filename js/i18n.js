@@ -23,8 +23,8 @@ export const I18N = {
     'month.prev': 'Bulan sebelumnya', 'month.next': 'Bulan berikutnya', 'month.date': 'Tgl',
     source: 'Sumber: Kemenag RI, lewat api.myquran.com',
     'tab.home': 'Hari ini', 'tab.month': 'Bulanan', 'tab.city': 'Kota',
-    undo: 'Batalkan', close: 'Tutup', reload: 'Muat ulang', 't.city': 'Menampilkan jadwal {c}', 't.online': 'Kembali online', 't.lang': 'Bahasa Indonesia',
-    't.update': 'Pembaruan siap', 't.offline': 'Siap dipakai offline',
+    undo: 'Batalkan', close: 'Tutup', 't.city': 'Menampilkan jadwal {c}', 't.online': 'Kembali online', 't.lang': 'Bahasa Indonesia',
+    't.offline': 'Siap dipakai offline',
     offline: 'Offline. Jadwal tetap jalan.',
   },
   en: {
@@ -51,8 +51,8 @@ export const I18N = {
     'month.prev': 'Previous month', 'month.next': 'Next month', 'month.date': 'Date',
     source: 'Source: Kemenag RI, via api.myquran.com',
     'tab.home': 'Today', 'tab.month': 'Monthly', 'tab.city': 'City',
-    undo: 'Undo', close: 'Close', reload: 'Reload', 't.city': 'Showing times for {c}', 't.online': 'Back online', 't.lang': 'English',
-    't.update': 'Update ready', 't.offline': 'Ready to use offline',
+    undo: 'Undo', close: 'Close', 't.city': 'Showing times for {c}', 't.online': 'Back online', 't.lang': 'English',
+    't.offline': 'Ready to use offline',
     offline: 'Offline. Times still work.',
   },
 };

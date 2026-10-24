@@ -472,13 +472,10 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       const w = reg.installing;
       w && w.addEventListener('statechange', () => {
         if (w.state !== 'installed') return;
-        if (navigator.serviceWorker.controller) toast(t('t.update'), { label: t('reload'), sticky: true, fn: () => w.postMessage('skipWaiting') });
-        else toast(t('t.offline'));
+        if (!navigator.serviceWorker.controller) toast(t('t.offline'));
       });
     });
   }).catch(() => {});
-  let reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
 }
 
 /* ---------- boot ---------- */

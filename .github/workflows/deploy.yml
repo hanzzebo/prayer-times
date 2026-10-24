@@ -3,6 +3,7 @@ name: Build and deploy
 on:
   push:
     branches: [main]
+    paths-ignore: ['**.md']
   workflow_dispatch:
   schedule:
     - cron: '0 19 1 * *'
@@ -53,7 +54,9 @@ jobs:
         run: |
           mkdir _site
           cp -r index.html manifest.webmanifest sw.js css js assets icons data _site/
-          sed -i "s/__BUILD__/$(git rev-parse --short HEAD)-$(date +%s)/" _site/sw.js
+          # version = hash of the app files, so phones only update when the app itself changed (not on data or docs changes)
+          BUILD=$(cd _site && find index.html manifest.webmanifest sw.js css js assets icons data/cities.json -type f | sort | xargs sha256sum | sha256sum | cut -c1-12)
+          sed -i "s/__BUILD__/$BUILD/" _site/sw.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
