@@ -395,3 +395,7 @@ body.on-city .app{padding-bottom:0}
  #home .hdr{position:relative;top:auto}
  #city.on{height:auto}
 }
+
+/* Monthly: keep the month name and prev/next arrows in view while the calendar and day list scroll */
+#month .pagebar{position:sticky;top:0;z-index:5;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+@media (min-width:760px){#month .pagebar{top:calc(var(--sat) + 8px)}}
