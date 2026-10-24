@@ -380,29 +380,45 @@ $('#gps').addEventListener('click', () => {
 });
 
 /* ---------- month ---------- */
-let mView = null;
+let mView = null, mData = null;
+const MP = [[1, 'subuh'], [3, 'dzuhur'], [4, 'ashar'], [5, 'maghrib'], [6, 'isya']];
 async function drawMonth(dir) {
   if (!city) return;
   if (!mView) { const z = zoned(city.z); mView = { y: z.y, m: z.m }; }
   const { y, m } = mView;
   $('#mname').textContent = dateFmt({ month: 'long', year: 'numeric' }).format(new Date(Date.UTC(y, m - 1, 15)));
   if (dir) restart($('#mname'), 'swap');
-  const tb = $('#days'), data = await loadYear(city.id, y);
+  const grid = $('#days'), data = await loadYear(city.id, y);
   if (mView.y !== y || mView.m !== m) return;
-  const n = new Date(Date.UTC(y, m, 0)).getUTCDate(), z = zoned(city.z);
-  if (!data) {
-    tb.innerHTML = `<tr><td colspan="7" class="state">${data === undefined ? t('offlinenodata') : t('nodata', { y })}</td></tr>`;
-  } else {
-    tb.innerHTML = Array.from({ length: n }, (_, i) => {
-      const T = data.days[doy(y, m, i + 1)];
-      const today = z.y === y && z.m === m && z.d === i + 1;
-      return `<tr class="${today ? 'today' : ''}"><td>${i + 1}</td>${[0, 1, 3, 4, 5, 6].map((k) => `<td>${T ? T[k] : '--:--'}</td>`).join('')}</tr>`;
+  mData = data;
+  const n = new Date(Date.UTC(y, m, 0)).getUTCDate(), z = zoned(city.z), here = z.y === y && z.m === m;
+  if (!mView.d || mView.d > n) mView.d = here ? z.d : 1;
+  // Monday-first week; 2024-01-01 was a Monday
+  const wd = dateFmt({ weekday: 'short' }), lead = (utcNoon({ y, m, d: 1 }).getUTCDay() + 6) % 7, full = dateFmt({ weekday: 'long', day: 'numeric', month: 'long' });
+  grid.innerHTML = Array.from({ length: 7 }, (_, i) => `<span class="wd" aria-hidden="true">${wd.format(utcNoon({ y: 2024, m: 1, d: i + 1 }))}</span>`).join('')
+    + '<span></span>'.repeat(lead)
+    + Array.from({ length: n }, (_, i) => {
+      const d = i + 1, cls = here && d === z.d ? 'today' : here && d < z.d || y * 12 + m < z.y * 12 + z.m ? 'past' : '';
+      return `<button type="button" class="cday ${cls}" data-d="${d}" aria-pressed="${d === mView.d}" aria-label="${full.format(utcNoon({ y, m, d }))}">${d}</button>`;
     }).join('');
-  }
-  if (dir && !RM) { tb.className = ''; void tb.offsetWidth; tb.className = dir > 0 ? 'from-right' : 'from-left'; }
+  drawDay();
+  if (dir && !RM) { grid.className = 'cgrid'; void grid.offsetWidth; grid.className = 'cgrid ' + (dir > 0 ? 'from-right' : 'from-left'); }
 }
-$('#prev').onclick = () => { mView.m--; if (mView.m < 1) { mView.m = 12; mView.y--; } drawMonth(-1); };
-$('#next').onclick = () => { mView.m++; if (mView.m > 12) { mView.m = 1; mView.y++; } drawMonth(1); };
+function drawDay() {
+  const { y, m, d } = mView, box = $('#mday'), z = zoned(city.z);
+  if (!mData) { box.innerHTML = `<p class="state">${mData === undefined ? t('offlinenodata') : t('nodata', { y })}</p>`; return; }
+  const T = mData.days[doy(y, m, d)], today = z.y === y && z.m === m && z.d === d;
+  box.innerHTML = `<h2>${dateFmt({ weekday: 'long', day: 'numeric', month: 'long' }).format(utcNoon({ y, m, d }))}${today ? ' · ' + t('month.today') : ''}</h2>`
+    + MP.map(([k, p]) => `<div class="mrow"><span>${t('pr.' + p)}</span><b>${T ? T[k] : '--:--'}</b></div>`).join('');
+}
+$('#days').addEventListener('click', (e) => {
+  const b = e.target.closest('.cday'); if (!b) return;
+  mView.d = +b.dataset.d;
+  $$('#days .cday').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  drawDay(); buzz(5);
+});
+$('#prev').onclick = () => { mView.d = 0; mView.m--; if (mView.m < 1) { mView.m = 12; mView.y--; } drawMonth(-1); };
+$('#next').onclick = () => { mView.d = 0; mView.m++; if (mView.m > 12) { mView.m = 1; mView.y++; } drawMonth(1); };
 
 /* ---------- navigation ---------- */
 const ORDER = ['home', 'month', 'city'];
@@ -417,7 +433,7 @@ function go(id) {
   placeTab(); window.scrollTo(0, 0); $('#mini').classList.remove('show');
   if (id === 'home') requestAnimationFrame(placeWeek);
   if (id === 'city') { setZone(city.z); $('#q').value = ''; gpsMsg(); drawCities(); const box = $('#cities'), me = box.querySelector('.city[aria-current="true"]'); box.scrollTop = me ? me.offsetTop - box.clientHeight / 2 + me.offsetHeight / 2 : 0; }
-  if (id === 'month') { const z = zoned(city.z); mView = { y: z.y, m: z.m }; drawMonth().then(() => { const r = $('#days .today'); if (r) r.scrollIntoView({ block: 'center' }); }); }
+  if (id === 'month') { const z = zoned(city.z); mView = { y: z.y, m: z.m }; drawMonth(); }
 }
 $$('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
 new IntersectionObserver(([e]) => $('#mini').classList.toggle('show', cur === 'home' && !e.isIntersecting), { rootMargin: '-120px 0px 0px 0px' }).observe($('#sky'));

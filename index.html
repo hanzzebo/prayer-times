@@ -98,7 +98,8 @@ try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')documen
 <div><h1 id="mname"></h1><p id="mloc"></p></div>
 <button class="nav" id="next" data-i18n-label="month.next"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
 </header>
-<div class="card mcard"><table><thead><tr><th scope="col" data-i18n="month.date"></th><th scope="col" data-i18n="pr.imsak"></th><th scope="col" data-i18n="pr.subuh"></th><th scope="col" data-i18n="pr.dzuhur"></th><th scope="col" data-i18n="pr.ashar"></th><th scope="col" data-i18n="pr.maghrib"></th><th scope="col" data-i18n="pr.isya"></th></tr></thead><tbody id="days"></tbody></table></div>
+<div class="card mcard"><div class="cgrid" id="days" role="group" data-i18n-label="aria.week"></div></div>
+<div class="card mday" id="mday" aria-live="polite"></div>
 <p class="src" data-i18n="source"></p>
 </section>
 </div>

@@ -122,12 +122,16 @@ button{font-family:inherit;color:inherit}
 .mhead h1{font-size:20px;font-weight:800;text-align:center}
 .mhead p{font-size:13px;color:var(--muted);text-align:center}
 .nav{width:44px;height:44px;border:0;background:transparent;border-radius:var(--r-sm);display:grid;place-items:center;cursor:pointer}
-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
-th{font-size:11px;color:var(--muted);font-weight:700;padding:12px 2px;text-align:center;border-bottom:1px solid var(--line)}
-td{text-align:center;padding:10px 2px;border-bottom:1px solid var(--line)}
-tr:last-child td{border-bottom:0}
-td:first-child{font-weight:700}
-tr.today td{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.cgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;padding:12px;text-align:center}
+.cgrid .wd{font-size:13px;font-weight:700;color:var(--muted);padding:4px 0}
+.cday{min-height:44px;border:0;border-radius:var(--r-sm);background:transparent;color:var(--ink);font:inherit;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer}
+.cday.past{color:var(--muted);font-weight:500}
+.cday.today{box-shadow:inset 0 0 0 2px var(--accent);color:var(--accent)}
+.cday[aria-pressed="true"]{background:var(--accent);color:var(--card);box-shadow:none}
+.mday{margin-top:12px;padding:14px 18px}
+.mday h2{font-size:18px;font-weight:800;margin:0 0 6px}
+.mrow{display:flex;justify-content:space-between;align-items:center;min-height:48px;border-top:1px solid var(--line);font-size:18px;font-variant-numeric:tabular-nums}
+.mrow span{font-weight:600}.mrow b{font-weight:800}
 .soon{font-size:13px;color:var(--muted);text-align:center;padding:16px}
 /* ===== micro-interactions =====
    timing: press <100ms, state 160-240ms, screen 280ms, spatial (sun) 1400ms */
@@ -190,8 +194,8 @@ input[type=search]::-webkit-search-cancel-button{-webkit-appearance:none;display
 .spin{width:18px;height:18px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:rot .7s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
 /* 14. month table slides in the direction of navigation */
-#days.from-right{animation:scr .26s var(--ease-out);--dx:20px}
-#days.from-left{animation:scr .26s var(--ease-out);--dx:-20px}
+.cgrid.from-right{animation:scr .26s var(--ease-out);--dx:20px}
+.cgrid.from-left{animation:scr .26s var(--ease-out);--dx:-20px}
 #mname{display:inline-block}
 /* 15. theme switch: icon swaps with a spin; colors cross-fade */
 #theme svg{transition:transform .4s var(--ease-spring),opacity .2s ease}
@@ -234,7 +238,6 @@ body,.card,.tabbar,.city,.field input,.gps,.zone button{transition:background-co
 .install{display:none;margin:16px auto 0;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:14px;cursor:pointer}
 .install.show{display:block}
 .mcard{padding:0 4px;overflow:clip}
-.mcard thead th{position:sticky;top:0;z-index:1;background:var(--card)}
 
 /* ===== mobile shell (v2): safe areas, page bars, tab bar, location picker ===== */
 /* iOS zooms into any input under 16px, so the search field stays at 16px */
