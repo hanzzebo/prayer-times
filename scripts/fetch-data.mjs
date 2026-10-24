@@ -46,8 +46,9 @@ async function getJSON(url, tries = 4) {
 export function zoneOf(daerah) {
   const p = daerah.toUpperCase();
   if (/PAPUA|MALUKU/.test(p)) return 'WIT';
-  if (/BALI|NUSA TENGGARA|NTB|NTT|SULAWESI|GORONTALO|KALIMANTAN (SELATAN|TIMUR|UTARA)|KALSEL|KALTIM|KALTARA/.test(p)) return 'WITA';
-  return 'WIB';
+  if (/BALI|NUSA TENGGARA|SULAWESI|GORONTALO|KALIMANTAN (SELATAN|TIMUR|UTARA)/.test(p)) return 'WITA';
+  if (/ACEH|SUMATERA|RIAU|JAMBI|BENGKULU|LAMPUNG|BANGKA|JAKARTA|JAWA|BANTEN|YOGYAKARTA|KALIMANTAN (BARAT|TENGAH)/.test(p)) return 'WIB';
+  throw new Error(`unknown province: ${daerah}`); // fail loudly instead of guessing a zone
 }
 
 const UPPER = new Set(['dki', 'di', 'ntb', 'ntt']);
@@ -157,4 +158,4 @@ async function main() {
   if (!out.length) process.exit(1);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((err) => { console.error(err); process.exit(1); });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((err) => { console.error(err); process.exit(1); });

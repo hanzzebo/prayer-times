@@ -27,4 +27,5 @@ test('provinces map to the right time zone', () => {
   assert.equal(zoneOf('BALI'), 'WITA');
   assert.equal(zoneOf('MALUKU UTARA'), 'WIT');
   assert.equal(zoneOf('PAPUA BARAT'), 'WIT');
+  assert.throws(() => zoneOf('KALTIM'));
 });
