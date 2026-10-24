@@ -489,6 +489,17 @@ addEventListener('appinstalled', () => $('#install').classList.remove('show'));
 
 /* ---------- service worker ---------- */
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  // Installed apps on phones usually resume from the background instead of relaunching, so the browser
+  // rarely checks for a new version on its own. Check whenever the app comes back to the foreground,
+  // and swap to the new version with a reload at a moment the user won't be interrupted.
+  const hadController = !!navigator.serviceWorker.controller;
+  const bootAt = Date.now();
+  let pendingReload = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return; // first install: nothing old to replace
+    if (document.hidden || Date.now() - bootAt < 8000) location.reload(); // in the background, or just opened
+    else pendingReload = true; // mid-use: wait until the app is left or reopened
+  });
   navigator.serviceWorker.register('./sw.js').then((reg) => {
     reg.addEventListener('updatefound', () => {
       const w = reg.installing;
@@ -497,6 +508,12 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
         if (!navigator.serviceWorker.controller) toast(t('t.offline'));
       });
     });
+    const check = () => { if (navigator.onLine) reg.update().catch(() => {}); };
+    document.addEventListener('visibilitychange', () => {
+      if (pendingReload) return location.reload();
+      if (!document.hidden) check();
+    });
+    setInterval(check, 60 * 60 * 1000);
   }).catch(() => {});
 }
 
