@@ -82,17 +82,59 @@ function initialCity() {
 }
 
 /* ---------- toast ---------- */
-let toastTimer, toastFn;
+let toastTimer, toastFn, toastWait = 0;
+const toastEl = $('#toast');
 function toast(msg, action) {
   $('#tmsg').textContent = msg;
   toastFn = action && action.fn;
   $('#tact').textContent = action ? action.label : '';
   $('#tact').style.display = action ? '' : 'none';
-  $('#toast').classList.add('show');
-  clearTimeout(toastTimer);
-  if (!action || !action.sticky) toastTimer = setTimeout(() => $('#toast').classList.remove('show'), action ? 4500 : 2400);
+  toastEl.classList.remove('drag');
+  toastEl.style.transform = toastEl.style.opacity = '';
+  toastEl.classList.add('show');
+  toastWait = action && action.sticky ? 0 : action ? 4500 : 2400;
+  armToast();
 }
-$('#tact').addEventListener('click', () => { if (toastFn) toastFn(); $('#toast').classList.remove('show'); });
+function armToast() { clearTimeout(toastTimer); if (toastWait) toastTimer = setTimeout(hideToast, toastWait); }
+function hideToast() { clearTimeout(toastTimer); toastEl.classList.remove('show', 'drag'); toastEl.style.transform = toastEl.style.opacity = ''; }
+$('#tact').addEventListener('click', () => { if (toastFn) toastFn(); hideToast(); });
+$('#tx').addEventListener('click', hideToast);
+// swipe up or sideways to dismiss; the timer pauses while the toast is held or hovered
+let drag = null;
+toastEl.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('button') || !toastEl.classList.contains('show')) return;
+  drag = { x: e.clientX, y: e.clientY, dx: 0, dy: 0 };
+  clearTimeout(toastTimer);
+  toastEl.classList.add('drag');
+  toastEl.setPointerCapture(e.pointerId);
+});
+toastEl.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  drag.dx = e.clientX - drag.x;
+  drag.dy = Math.min(0, e.clientY - drag.y);
+  toastEl.style.transform = `translate(calc(-50% + ${drag.dx}px), ${drag.dy}px)`;
+  toastEl.style.opacity = String(Math.max(0.2, 1 - Math.max(Math.abs(drag.dx) / 200, -drag.dy / 80)));
+});
+function endDrag() {
+  if (!drag) return;
+  const { dx, dy } = drag;
+  drag = null;
+  toastEl.classList.remove('drag');
+  if (Math.abs(dx) > 80 || dy < -32) {
+    toastEl.style.opacity = '0';
+    toastEl.style.transform = Math.abs(dx) > 80 ? `translate(calc(-50% + ${Math.sign(dx) * 120}%), 0)` : 'translate(-50%, -140%)';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 220);
+    buzz(6);
+  } else {
+    toastEl.style.transform = toastEl.style.opacity = '';
+    armToast();
+  }
+}
+toastEl.addEventListener('pointerup', endDrag);
+toastEl.addEventListener('pointercancel', endDrag);
+toastEl.addEventListener('mouseenter', () => clearTimeout(toastTimer));
+toastEl.addEventListener('mouseleave', () => { if (!drag && toastEl.classList.contains('show')) armToast(); });
 
 /* ---------- today state ---------- */
 const state = { today: null, times: null, tmrw: null, yday: null, next: -1, selOffset: 0, phase: '', status: 'loading' };
