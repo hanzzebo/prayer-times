@@ -11,6 +11,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const API = process.env.API_BASE || 'https://api.myquran.com/v2';
 const GEO = process.env.GEOCODE_BASE || 'https://nominatim.openstreetmap.org';
@@ -42,7 +43,7 @@ async function getJSON(url, tries = 4) {
 }
 
 // Province (daerah) to Indonesian time zone.
-function zoneOf(daerah) {
+export function zoneOf(daerah) {
   const p = daerah.toUpperCase();
   if (/PAPUA|MALUKU/.test(p)) return 'WIT';
   if (/BALI|NUSA TENGGARA|NTB|NTT|SULAWESI|GORONTALO|KALIMANTAN (SELATAN|TIMUR|UTARA)|KALSEL|KALTIM|KALTARA/.test(p)) return 'WITA';
@@ -93,10 +94,13 @@ async function pool(items, n, fn) {
 async function geocode(city) {
   const kind = /^Kab\./.test(city.n) ? 'Kabupaten' : 'Kota';
   const base = city.n.replace(/^(Kab\.|Kota)\s+/, '');
-  const q = `${kind} ${base}, ${city.p}, Indonesia`;
-  const url = `${GEO}/search?format=json&limit=1&countrycodes=id&q=${encodeURIComponent(q)}`;
-  const res = await getJSON(url, 2);
-  if (Array.isArray(res) && res[0]) return [Number(Number(res[0].lat).toFixed(4)), Number(Number(res[0].lon).toFixed(4))];
+  // second try: bare place name, e.g. "Pulau Laut" for "Pulau Laut Kab. Natuna"
+  const bare = base.replace(/\s+Kab\.\s.*$/, '');
+  for (const q of [`${kind} ${base}, ${city.p}, Indonesia`, `${bare}, ${city.p}, Indonesia`]) {
+    const res = await getJSON(`${GEO}/search?format=json&limit=1&countrycodes=id&q=${encodeURIComponent(q)}`, 2);
+    if (Array.isArray(res) && res[0]) return [Number(Number(res[0].lat).toFixed(4)), Number(Number(res[0].lon).toFixed(4))];
+    await sleep(1100); // Nominatim usage policy: max 1 request per second
+  }
   return null;
 }
 
@@ -134,12 +138,12 @@ async function main() {
   });
 
   if (process.env.GEOCODE !== '0') {
-    const todo = [...known.values()].filter((c) => c.lat == null && !c.geoFailed);
+    const todo = [...known.values()].filter((c) => c.lat == null); // misses are retried each run (about 10 cities)
     if (todo.length) console.log(`geocoding ${todo.length} cities (1 request/second, OpenStreetMap Nominatim)`);
     for (const c of todo) {
       try {
         const ll = await geocode(c);
-        if (ll) [c.lat, c.lon] = ll; else c.geoFailed = true;
+        if (ll) { [c.lat, c.lon] = ll; delete c.geoFailed; }
       } catch (err) { console.warn(`  ! geocode ${c.n}: ${err.message}`); }
       await sleep(1100); // Nominatim usage policy: max 1 request per second
     }
@@ -153,4 +157,4 @@ async function main() {
   if (!out.length) process.exit(1);
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+if (import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((err) => { console.error(err); process.exit(1); });

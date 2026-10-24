@@ -12,6 +12,7 @@ const SHELL_FILES = [
   'css/styles.css',
   'js/app.js',
   'js/i18n.js',
+  'js/next.js',
   'data/cities.json',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -42,9 +43,9 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
-  // Pages: try the network for freshness, fall back to the cached app shell when offline.
+  // Pages: cached shell first so a slow network can't leave a blank screen; updates come with a new VERSION.
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).catch(() => caches.match('index.html', { cacheName: SHELL })));
+    e.respondWith(caches.match('index.html', { cacheName: SHELL }).then((hit) => hit || fetch(req)));
     return;
   }
 

@@ -1,4 +1,5 @@
 import { I18N } from './i18n.js';
+import { sec, computeNext } from './next.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -28,13 +29,11 @@ function zoned(zone, date = new Date()) {
 const doy = (y, m, d) => (Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 864e5;
 const shift = (y, m, d, n) => { const x = new Date(Date.UTC(y, m - 1, d + n)); return { y: x.getUTCFullYear(), m: x.getUTCMonth() + 1, d: x.getUTCDate() }; };
 const utcNoon = ({ y, m, d }) => new Date(Date.UTC(y, m - 1, d, 12));
-const sec = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 3600 + m * 60; };
 const fmtDur = (s) => [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, '0')).join(':');
 const dateFmt = (opts, cal) => new Intl.DateTimeFormat(LOC() + (cal ? '-u-ca-' + cal : ''), { timeZone: 'UTC', ...opts });
 
 /* ---------- prayers ---------- */
 const KEYS = ['imsak', 'subuh', 'terbit', 'dzuhur', 'ashar', 'maghrib', 'isya'];
-const PRAYERS = [1, 3, 4, 5, 6]; // indices that count as "next prayer"
 const ICON = {
   imsak: '<path d="M4 18h16M7 14a5 5 0 0 1 10 0M12 4v4M5 8l2 2M19 8l-2 2"/>',
   subuh: '<path d="M4 18h16M7 14a5 5 0 0 1 10 0M12 4v4M5 8l2 2M19 8l-2 2"/>',
@@ -141,24 +140,14 @@ const state = { today: null, times: null, tmrw: null, yday: null, next: -1, selO
 const SKY_OVERRIDE = new URLSearchParams(location.search).get('sky'); // ?sky=dawn|day|dusk|night to preview
 
 async function loadToday() {
-  const z = zoned(city.z);
+  const c0 = city, z = zoned(c0.z);
   state.today = { y: z.y, m: z.m, d: z.d };
-  const [a, b, c] = await Promise.all([timesFor(city.id, state.today), timesFor(city.id, shift(z.y, z.m, z.d, 1)), timesFor(city.id, shift(z.y, z.m, z.d, -1))]);
+  const [a, b, c] = await Promise.all([timesFor(c0.id, state.today), timesFor(c0.id, shift(z.y, z.m, z.d, 1)), timesFor(c0.id, shift(z.y, z.m, z.d, -1))]);
+  if (city !== c0) return; // city changed while loading
   state.times = a || null; state.tmrw = b || null; state.yday = c || null;
   state.status = a ? 'ok' : a === undefined ? 'offline' : 'nodata';
   state.next = -1; state.phase = '';
   renderStatic(); tick(true);
-}
-
-function computeNext(s) {
-  const T = state.times;
-  for (const i of PRAYERS) if (sec(T[i]) > s) {
-    const prevIdx = PRAYERS[PRAYERS.indexOf(i) - 1];
-    const prev = prevIdx != null ? sec(T[prevIdx]) : state.yday ? sec(state.yday[6]) - 86400 : sec(T[i]) - 3600;
-    return { i, target: sec(T[i]), prev, tomorrow: false };
-  }
-  const nt = state.tmrw ? sec(state.tmrw[1]) + 86400 : null;
-  return { i: 1, target: nt, prev: sec(T[6]), tomorrow: true };
 }
 
 function phaseOf(s) {
@@ -207,7 +196,7 @@ function tick(force) {
   $('#sun').style.opacity = up ? 1 : 0; $('#sunpath').style.opacity = up ? 1 : 0;
   moveSun(Math.min(1, Math.max(0, (s - rise) / (set - rise))));
 
-  const n = computeNext(s);
+  const n = computeNext(T, state.yday, state.tmrw, s);
   if (n.i !== state.next || force) {
     const changed = state.next !== -1 && n.i !== state.next;
     state.next = n.i; state.nextTomorrow = n.tomorrow;
@@ -394,8 +383,8 @@ async function drawMonth(dir) {
   const { y, m } = mView;
   $('#mname').textContent = dateFmt({ month: 'long', year: 'numeric' }).format(new Date(Date.UTC(y, m - 1, 15)));
   if (dir) restart($('#mname'), 'swap');
-  const grid = $('#days'), data = await loadYear(city.id, y);
-  if (mView.y !== y || mView.m !== m) return;
+  const c0 = city, grid = $('#days'), data = await loadYear(c0.id, y);
+  if (city !== c0 || mView.y !== y || mView.m !== m) return;
   mData = data;
   const n = new Date(Date.UTC(y, m, 0)).getUTCDate(), z = zoned(city.z), here = z.y === y && z.m === m;
   if (!mView.d || mView.d > n) mView.d = here ? z.d : 1;
