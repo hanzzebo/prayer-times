@@ -8,10 +8,8 @@ on:
   schedule:
     - cron: '0 19 1 * *'
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
+# no default permissions; each job asks only for what it needs
+permissions: {}
 
 concurrency:
   group: pages
@@ -20,10 +18,12 @@ concurrency:
 jobs:
   data:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # commit fetched data
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - name: Fetch prayer schedules (skips files that already exist)
@@ -43,11 +43,15 @@ jobs:
   deploy:
     needs: data
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.ref_name }}
       - name: Assemble site
@@ -57,9 +61,9 @@ jobs:
           # version = hash of the app files, so phones only update when the app itself changed (not on data or docs changes)
           BUILD=$(cd _site && find index.html manifest.webmanifest sw.js css js assets icons data/cities.json -type f | sort | xargs sha256sum | sha256sum | cut -c1-12)
           sed -i "s/__BUILD__/$BUILD/" _site/sw.js
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -112,6 +112,7 @@ async function main() {
   const failures = [];
   let fetched = 0;
   await pool(list.data, CONCURRENCY, async ({ id, lokasi }) => {
+    if (!/^\d{1,6}$/.test(String(id))) { failures.push(`bad city id ${JSON.stringify(id)}`); console.warn(`  ! bad city id ${JSON.stringify(id)}`); return; } // ids end up in file paths and HTML
     const city = known.get(id) || { id, n: titleCase(lokasi), p: '', z: '' };
     city.n = titleCase(lokasi);
     for (const year of YEARS) {
