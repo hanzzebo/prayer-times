@@ -143,8 +143,34 @@ button:active,.city:active{transform:scale(.96)}
 .pr{animation:rowin .32s var(--ease-out) both;animation-delay:calc(var(--i,0) * 35ms)}
 @keyframes rowin{from{opacity:0;transform:translateY(6px)}}
 /* 4. live progress toward the next prayer */
-.pr.next{position:relative;overflow:hidden}
+.pr.next{position:relative;overflow:clip}
 .pr.next .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);border-radius:0 3px 3px 0;transition:width 1s linear}
+.pr.next{padding-bottom:36px}
+.pr.next .walk{position:absolute;bottom:2px;left:max(0px,calc(100% - 65px));color:var(--accent);pointer-events:none}
+.walk svg{display:block;overflow:visible}
+.walk .far{opacity:.5}
+/* walk cycle: stance 0-60% (foot planted, leg sweeps back), swing 60-100% (knee folds, leg comes forward).
+   The far leg runs half a cycle behind. The body dips at each foot contact and rises as the legs pass. */
+.walk .mt{animation:m-thigh .96s infinite}
+.walk .mt .sh{animation:m-shin .96s infinite}
+.walk .mt.far,.walk .mt.far .sh{animation-delay:-.48s}
+.walk .ma{animation:m-arm .96s infinite}
+.walk .mn{transform-origin:76px 46px;transform:rotate(4deg)}
+.walk .mb{animation:dip .48s infinite}
+/* camels pace: both legs on the same side move together, slower stride than the person */
+.walk .ct{animation:c-thigh 1.44s infinite}
+.walk .cf .sh{animation:c-fore 1.44s infinite}
+.walk .ch .sh{animation:c-hind 1.44s infinite}
+.walk .ct.far,.walk .ct.far .sh{animation-delay:-.72s}
+.walk .cm{animation:dip .72s infinite}
+@keyframes m-thigh{0%{transform:rotate(-25deg);animation-timing-function:linear}60%{transform:rotate(23deg);animation-timing-function:ease-in-out}100%{transform:rotate(-25deg)}}
+@keyframes m-shin{0%{transform:rotate(3deg)}35%{transform:rotate(0)}58%{transform:rotate(22deg)}76%{transform:rotate(52deg)}93%{transform:rotate(4deg)}100%{transform:rotate(3deg)}}
+@keyframes m-arm{0%,100%{transform:rotate(28deg)}60%{transform:rotate(-26deg)}}
+@keyframes c-thigh{0%{transform:rotate(-18deg);animation-timing-function:linear}60%{transform:rotate(17deg);animation-timing-function:ease-in-out}100%{transform:rotate(-18deg)}}
+@keyframes c-fore{0%,40%{transform:rotate(0)}62%{transform:rotate(30deg)}78%{transform:rotate(60deg)}94%,100%{transform:rotate(0)}}
+@keyframes c-hind{0%,40%{transform:rotate(0)}62%{transform:rotate(18deg)}78%{transform:rotate(40deg)}94%,100%{transform:rotate(0)}}
+@keyframes dip{0%,100%{transform:translateY(1.2px);animation-timing-function:ease-out}50%{transform:translateY(-.3px);animation-timing-function:ease-in}}
+@media (prefers-reduced-motion:reduce){.walk *{animation:none!important}}
 /* 5. hero values change with a vertical slide */
 .swap{display:inline-block;animation:swapin .36s var(--ease-out)}
 @keyframes swapin{from{opacity:0;transform:translateY(10px)}}

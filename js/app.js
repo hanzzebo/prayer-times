@@ -229,6 +229,12 @@ function tick(force) {
   if (bar) bar.style.width = Math.min(100, Math.max(0, ((s - n.prev) / (n.target - n.prev)) * 100)).toFixed(2) + '%';
 }
 
+/* a traveller leading a camel walks along the progress bar. Every limb is its own group pivoting on
+   its joint (hip or shoulder, then knee), so CSS can run a real walk cycle */
+const WALKER = '<span class="walk">'
+  + '<svg width="65" height="34" viewBox="0 0 92 48" fill="currentColor" stroke="currentColor" stroke-linecap="round"><g class="cm"><g class="ct cf far" style="transform-origin:34px 25.5px"><line x1="34" y1="25.5" x2="34" y2="35.8" stroke-width="3.2"/><g class="sh" style="transform-origin:34px 35.8px"><line x1="34" y1="35.8" x2="34" y2="45.6" stroke-width="2.3"/><line x1="33.4" y1="45.6" x2="35.6" y2="45.6" stroke-width="2.2"/></g></g><g class="ct ch far" style="transform-origin:14px 24.5px"><line x1="14" y1="24.5" x2="14" y2="35.4" stroke-width="3.6"/><g class="sh" style="transform-origin:14px 35.4px"><line x1="14" y1="35.4" x2="14" y2="45.6" stroke-width="2.3"/><line x1="13.4" y1="45.6" x2="15.6" y2="45.6" stroke-width="2.2"/></g></g><path stroke="none" d="M8 23.5C7 17 13 12 19 10C24 4 31 5 34 12C35.5 15.5 38 17.5 41 19C44 20.5 46 22.5 48 20C50 17 51 11 53 8C54 6 56 5.5 58 6.5L62 8.5C63.5 9.2 63.5 11 62 11.3L57 12C55.5 12.3 55 13.5 54.6 15C53.6 19 52.6 22.6 49.4 25C46 27 43 27.2 40 27.6C33 28.6 22 28.6 17 28.2C12 27.8 9 26.8 8 23.5Z"/><path stroke="none" d="M54 7.2L54.6 4.6L56.3 6.6Z"/><path fill="none" stroke-width="1.3" d="M8.4 21.5Q6.2 25 6.4 30"/><g class="ct cf" style="transform-origin:38px 25.5px"><line x1="38" y1="25.5" x2="38" y2="35.8" stroke-width="3.2"/><g class="sh" style="transform-origin:38px 35.8px"><line x1="38" y1="35.8" x2="38" y2="45.6" stroke-width="2.3"/><line x1="37.4" y1="45.6" x2="39.6" y2="45.6" stroke-width="2.2"/></g></g><g class="ct ch" style="transform-origin:18px 24.5px"><line x1="18" y1="24.5" x2="18" y2="35.4" stroke-width="3.6"/><g class="sh" style="transform-origin:18px 35.4px"><line x1="18" y1="35.4" x2="18" y2="45.6" stroke-width="2.3"/><line x1="17.4" y1="45.6" x2="19.6" y2="45.6" stroke-width="2.2"/></g></g></g><g class="mn"><g class="mb"><path class="far" fill="none" stroke-width="2.6" stroke-linejoin="round" d="M76.6 21.2L73.4 25.8L70.8 27.4"/><path fill="none" stroke-width="0.8" d="M70.8 27.4Q64.5 25.5 62.4 11.6"/><g class="mt far" style="transform-origin:75.6px 30.5px"><line x1="75.6" y1="30.5" x2="75.6" y2="38.3" stroke-width="3.8"/><g class="sh" style="transform-origin:75.6px 38.3px"><line x1="75.6" y1="38.3" x2="75.6" y2="45.6" stroke-width="3.2"/><line x1="75.0" y1="45.6" x2="78.19999999999999" y2="45.6" stroke-width="2.2"/></g></g><circle stroke="none" cx="77.2" cy="15.2" r="3.4"/><line x1="76.8" y1="20.4" x2="75.7" y2="30" stroke-width="6.2"/><g class="mt" style="transform-origin:75.6px 30.5px"><line x1="75.6" y1="30.5" x2="75.6" y2="38.3" stroke-width="3.8"/><g class="sh" style="transform-origin:75.6px 38.3px"><line x1="75.6" y1="38.3" x2="75.6" y2="45.6" stroke-width="3.2"/><line x1="75.0" y1="45.6" x2="78.19999999999999" y2="45.6" stroke-width="2.2"/></g></g><g class="ma" style="transform-origin:76.9px 21.2px"><line x1="76.9" y1="21.2" x2="76.9" y2="27" stroke-width="2.8"/><g style="transform-origin:76.9px 27px;transform:rotate(-24deg)"><line x1="76.9" y1="27" x2="76.9" y2="31.6" stroke-width="2.5"/></g></g></g></g></svg>'
+  + '</span>';
+
 /* ---------- rendering ---------- */
 function renderStatic() {
   const td = state.today;
@@ -266,7 +272,7 @@ async function drawList() {
     return `<div class="pr ${cls}" style="--i:${i}">
 <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">${ICON[k]}</svg>
 <span class="nm">${pname(i)}${sub ? `<small>${sub}</small>` : ''}</span>
-<span class="tm">${T[i]}</span>${nxt === i ? '<span class="bar" aria-hidden="true"></span>' : ''}</div>`;
+<span class="tm">${T[i]}</span>${nxt === i ? '<span class="bar" aria-hidden="true">' + WALKER + '</span>' : ''}</div>`;
   }).join('');
   tick();
 }
