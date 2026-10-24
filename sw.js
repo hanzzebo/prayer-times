@@ -12,7 +12,7 @@ const SHELL_FILES = [
   'css/styles.css',
   'js/app.js',
   'js/i18n.js',
-  'js/next.js',
+  'js/times.js',
   'data/cities.json',
   'icons/icon-192.png',
   'icons/icon-512.png',

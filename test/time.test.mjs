@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computeNext, sec } from '../js/next.js';
+import { computeNext, sec } from '../js/times.js';
 import { zoneOf } from '../scripts/fetch-data.mjs';
 
 const T = ['04:20', '04:30', '05:45', '11:55', '15:15', '17:50', '19:00'];

@@ -1,5 +1,5 @@
 import { I18N } from './i18n.js';
-import { sec, computeNext } from './next.js';
+import { sec, computeNext } from './times.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
