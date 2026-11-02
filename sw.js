@@ -4,6 +4,7 @@
 const VERSION = '__BUILD__';
 const SHELL = `shell-${VERSION}`;
 const DATA = 'data-v1';
+const PAGES = 'pages-v1';
 
 const SHELL_FILES = [
   './',
@@ -43,9 +44,14 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;
 
-  // Pages: cached shell first so a slow network can't leave a blank screen; updates come with a new VERSION.
   if (req.mode === 'navigate') {
-    e.respondWith(caches.match('index.html', { cacheName: SHELL }).then((hit) => hit || fetch(req)));
+    const rel = url.pathname.slice(new URL(self.registration.scope).pathname.length);
+    // Home: cached shell first so a slow network can't leave a blank screen; updates come with a new VERSION.
+    if (rel === '' || rel === 'index.html') {
+      e.respondWith(caches.match('index.html', { cacheName: SHELL }).then((hit) => hit || fetch(req)));
+    } else {
+      e.respondWith(cityPage(req, rel));
+    }
     return;
   }
 
@@ -67,3 +73,22 @@ self.addEventListener('fetch', (e) => {
   // App files: cache first.
   e.respondWith(caches.match(req, { cacheName: SHELL }).then((hit) => hit || fetch(req)));
 });
+
+// City pages (jadwal-sholat/<slug>/ and the English ones) carry this month's table, so the network comes first.
+// Offline: the saved copy, else the home shell pointed back at the site root so its relative paths still load.
+async function cityPage(req, rel) {
+  const cache = await caches.open(PAGES);
+  try {
+    const res = await fetch(req);
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  } catch (err) {
+    const hit = await cache.match(req);
+    if (hit) return hit;
+    const shell = await caches.match('index.html', { cacheName: SHELL });
+    if (!shell) throw err;
+    const depth = rel.split('/').length - 1;
+    const html = (await shell.text()).replace('<meta charset="utf-8">', `$&<base href="${'../'.repeat(depth)}">`);
+    return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+  }
+}

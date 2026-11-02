@@ -10,9 +10,9 @@ The app never calls a prayer-time API while you use it. A GitHub Actions workflo
 
 1. `scripts/fetch-data.mjs` downloads the schedule from `api.myquran.com` and saves it as JSON.
 2. The workflow commits any new files to `data/`.
-3. It copies the app and the data into a site folder and publishes it to GitHub Pages.
+3. It copies the app and the data into a site folder, builds the city pages (see below) and publishes it to GitHub Pages.
 
-The workflow runs on every push to `main` (pushes that only change Markdown files are skipped) and on the first day of each month. The script keeps files it has already downloaded, so a normal run only fetches what is missing. From November onward it also fetches the next year, so the schedule carries on past New Year.
+The workflow runs on every push to `main` (pushes that only change Markdown files are skipped) and just after midnight WIB at the end of each month, so the city pages show the new month from the 1st. The script keeps files it has already downloaded, so a normal run only fetches what is missing. From November onward it also fetches the next year, so the schedule carries on past New Year.
 
 The data comes in two shapes:
 
@@ -20,6 +20,21 @@ The data comes in two shapes:
 - `data/<year>/<cityId>.json` holds one city's year, one entry per day, with the times for imsak, subuh, terbit, dzuhur, ashar, maghrib and isya.
 
 The coordinates come from OpenStreetMap's Nominatim service, looked up once while building the data. The app only uses them to find the nearest city when you ask it to.
+
+## City pages and search engines
+
+The app itself is one page, so search engines would only see one generic page. At deploy, `scripts/build-pages.mjs` adds a page for every city in both languages:
+
+- `jadwal-sholat/<city>/` in Indonesian, for example `jadwal-sholat/kota-bandung/` and `jadwal-sholat/kab-bandung/`
+- `en/prayer-times/<city>/` in English
+- `jadwal-sholat/` and `en/prayer-times/`, which list every city by province
+- `sitemap.xml`
+
+Each city page is the normal app opened on that city, plus a section with the city's name, this month's table and links to the other cities in the province. The pages carry canonical, `hreflang` and link-preview tags. Picking another city or language in the app hides that section, since it no longer matches.
+
+To try it locally, copy the app into a folder and run `SITE_URL=https://<user>.github.io/<repo>/ node scripts/build-pages.mjs <folder>`. The links to the city lists on the home page only work in a built site.
+
+To get the pages into Google, add the site as a URL-prefix property in Google Search Console and submit `sitemap.xml`. Bing Webmaster Tools works the same way. The site is not under a domain root, so a `robots.txt` would be ignored; the sitemap does that job.
 
 ## Offline and updates
 

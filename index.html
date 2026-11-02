@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-CAGONHEv619Qfdccokd0cMlVQb5ZYjQ8L4r2NWi9oko='; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Jadwal Sholat</title>
-<meta name="description" content="Jadwal sholat resmi Kemenag untuk seluruh Indonesia. Offline, tanpa pelacakan.">
+<title>Jadwal Sholat Hari Ini untuk Seluruh Indonesia</title>
+<meta name="description" content="Jadwal sholat hari ini untuk semua kota dan kabupaten di Indonesia, dari Kemenag RI. Hitung mundur ke waktu sholat berikutnya. Bisa offline, tanpa pelacakan.">
 <meta name="theme-color" content="#1F67A3" id="themecolor">
 <meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -74,6 +74,7 @@ try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')documen
 
 <div class="card" id="list"></div>
 <p class="foot" data-i18n="foot"></p>
+<p class="foot"><a id="alllink" href="jadwal-sholat/" data-i18n="allcities">Jadwal sholat semua kota dan kabupaten</a></p>
 <button class="install" id="install" type="button" data-i18n="install"></button>
 </section>
 

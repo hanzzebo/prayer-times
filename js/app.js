@@ -11,8 +11,13 @@ const store = {
 };
 const restart = (el, cls) => { if (RM || !el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
 
+/* ---------- city pages (scripts/build-pages.mjs): the page names its city and language ---------- */
+const PAGE_CITY = document.documentElement.dataset.city || null;
+const PAGE_LANG = document.documentElement.lang;
+const SECTIONS = { id: 'jadwal-sholat/', en: 'en/prayer-times/' }; // same paths as build-pages.mjs
+
 /* ---------- language ---------- */
-let LANG = store.get('lang') || ((navigator.language || '').toLowerCase().startsWith('id') ? 'id' : 'en');
+let LANG = store.get('lang') || (PAGE_CITY ? PAGE_LANG : (navigator.language || '').toLowerCase().startsWith('id') ? 'id' : 'en');
 const t = (k, v = {}) => (I18N[LANG][k] ?? k).replace(/\{(\w+)\}/g, (_, x) => v[x] ?? '');
 const LOC = () => (LANG === 'id' ? 'id-ID' : 'en-GB');
 
@@ -71,6 +76,8 @@ let city = null, estimated = false, zoneFilter = 'WIB';
 const cityById = (id) => CITIES.find((c) => c.id === id);
 const shortName = (n) => n.replace(/^Kota\s+/, '');
 function initialCity() {
+  const page = cityById(PAGE_CITY);
+  if (page) return page;
   const saved = cityById(store.get('city'));
   if (saved) return saved;
   let tz = '';
@@ -315,6 +322,9 @@ function renderLoc(animate) {
   $('#mloc').textContent = `${shortName(city.n)} · ${city.z}`;
   $('#curcity').textContent = t('city.current', { c: city.n, p: city.p, z: city.z });
   $('#notice').hidden = !estimated;
+  // the city page's own text only fits while its city and language are shown
+  const seo = $('#seo');
+  if (seo) seo.hidden = city.id !== PAGE_CITY || LANG !== PAGE_LANG;
 }
 function applyCity(c, { save = true, animate = true } = {}) {
   city = c;
@@ -457,6 +467,7 @@ function applyLang() {
   $('#lang').setAttribute('aria-label', t('aria.lang'));
   $('#arc').setAttribute('aria-label', t('aria.arc'));
   $('#hin').textContent = t('in');
+  $('#alllink').setAttribute('href', SECTIONS[LANG]);
   if (!$('#gps').hasAttribute('aria-busy')) $('#gpslabel').textContent = t('gps.btn');
   gpsMsg();
   net();
@@ -516,7 +527,9 @@ try {
   CITIES = await res.json();
 } catch (e) { CITIES = []; }
 if (CITIES.length) {
-  applyCity(initialCity(), { save: false, animate: false });
+  // arriving on a city page with nothing saved yet: that city becomes the default
+  const first = initialCity();
+  applyCity(first, { save: first.id === PAGE_CITY && !store.get('city'), animate: false });
 } else {
   state.status = 'offline'; $('#locname').textContent = '—'; drawCities();
   $('#list').innerHTML = `<p class="state">${t('city.loadfail')}</p>`;

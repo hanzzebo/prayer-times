@@ -399,3 +399,20 @@ body.on-city .app{padding-bottom:0}
 /* Monthly: keep the month name and prev/next arrows in view while the calendar and day list scroll */
 #month .pagebar{position:sticky;top:0;z-index:5;box-shadow:0 8px 20px rgba(0,0,0,.18)}
 @media (min-width:760px){#month .pagebar{top:calc(var(--sat) + 8px)}}
+
+/* city pages and city lists (scripts/build-pages.mjs): plain text and the month table, for readers and search engines */
+.foot a{color:inherit}
+.seo{margin:24px 16px 0;padding:20px 16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);font-size:14px;line-height:1.55;color:var(--muted)}
+.seo h1{font-size:20px;line-height:1.3;color:var(--ink)}
+.seo h2{margin-top:20px;font-size:15px;color:var(--ink)}
+.seo p{margin-top:8px}
+.seo a{color:var(--accent);font-weight:600}
+.seo ul{list-style:none;padding:0;margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 16px}
+.seo .tbl{overflow-x:auto;margin:16px -16px 0;padding:0 16px}
+.seo table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.seo caption{text-align:left;font-weight:700;font-size:15px;padding-bottom:8px}
+.seo th,.seo td{padding:6px 2px;text-align:right;white-space:nowrap;border-top:1px solid var(--line)}
+.seo th[scope="row"],.seo thead th:first-child{text-align:left;font-weight:600;color:var(--muted)}
+.seo thead th{border-top:0;font-weight:700;font-size:12px}
+.pages{max-width:720px;margin:0 auto;padding:calc(var(--sat,0px) + 8px) 0 48px}
+@media (min-width:760px){#home .seo{margin-left:0;margin-right:0}}

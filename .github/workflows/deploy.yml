@@ -6,7 +6,7 @@ on:
     paths-ignore: ['**.md']
   workflow_dispatch:
   schedule:
-    - cron: '0 19 1 * *'
+    - cron: '5 17 28-31 * *' # 00:05 WIB; the run that lands on the 1st puts the new month on the city pages
     - cron: '0 19 * 12 *' # daily in December, in case next year's schedule is published late
 
 # no default permissions; each job asks only for what it needs
@@ -57,14 +57,22 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - name: Assemble site
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
           mkdir _site
           cp -r index.html manifest.webmanifest sw.js css js assets icons data _site/
+          # city pages, city lists and sitemap.xml for search engines
+          node scripts/build-pages.mjs _site
           # version = hash of the app files, so phones only update when the app itself changed (not on data or docs changes)
           BUILD=$(cd _site && find index.html manifest.webmanifest sw.js css js assets icons data/cities.json -type f | sort | xargs sha256sum | sha256sum | cut -c1-12)
           sed -i "s/__BUILD__/$BUILD/" _site/sw.js
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: _site
