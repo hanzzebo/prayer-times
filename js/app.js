@@ -17,7 +17,8 @@ const PAGE_LANG = document.documentElement.lang;
 const SECTIONS = { id: 'jadwal-sholat/', en: 'en/prayer-times/' }; // same paths as build-pages.mjs
 
 /* ---------- language ---------- */
-let LANG = store.get('lang') || (PAGE_CITY ? PAGE_LANG : (navigator.language || '').toLowerCase().startsWith('id') ? 'id' : 'en');
+// English first; a city page keeps its own language so its text and the app agree
+let LANG = store.get('lang') || (PAGE_CITY ? PAGE_LANG : 'en');
 const t = (k, v = {}) => (I18N[LANG][k] ?? k).replace(/\{(\w+)\}/g, (_, x) => v[x] ?? '');
 const LOC = () => (LANG === 'id' ? 'id-ID' : 'en-GB');
 
@@ -39,15 +40,6 @@ const dateFmt = (opts, cal) => new Intl.DateTimeFormat(LOC() + (cal ? '-u-ca-' +
 
 /* ---------- prayers ---------- */
 const KEYS = ['imsak', 'subuh', 'terbit', 'dzuhur', 'ashar', 'maghrib', 'isya'];
-const ICON = {
-  imsak: '<path d="M4 18h16M7 14a5 5 0 0 1 10 0M12 4v4M5 8l2 2M19 8l-2 2"/>',
-  subuh: '<path d="M4 18h16M7 14a5 5 0 0 1 10 0M12 4v4M5 8l2 2M19 8l-2 2"/>',
-  terbit: '<path d="M4 18h16M7 14a5 5 0 0 1 10 0M12 10V5M9 8l3-3 3 3"/>',
-  dzuhur: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
-  ashar: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/>',
-  maghrib: '<path d="M4 18h16M7 14a5 5 0 0 1 10 0M12 5v5M9 7l3 3 3-3"/>',
-  isya: '<path d="M20 15a8 8 0 1 1-9-11 6 6 0 0 0 9 11z"/>',
-};
 const pname = (i) => t('pr.' + KEYS[i]);
 
 /* ---------- data ---------- */
@@ -142,9 +134,13 @@ toastEl.addEventListener('pointercancel', endDrag);
 toastEl.addEventListener('mouseenter', () => clearTimeout(toastTimer));
 toastEl.addEventListener('mouseleave', () => { if (!drag && toastEl.classList.contains('show')) armToast(); });
 
+
 /* ---------- today state ---------- */
-const state = { today: null, times: null, tmrw: null, yday: null, next: -1, selOffset: 0, phase: '', status: 'loading' };
-const SKY_OVERRIDE = new URLSearchParams(location.search).get('sky'); // ?sky=dawn|day|dusk|night to preview
+const state = { today: null, times: null, tmrw: null, yday: null, next: -1, selOffset: 0, status: 'loading' };
+const AR = ['', 'الفجر', '', 'الظهر', 'العصر', 'المغرب', 'العشاء'];
+const ART = { 1: 'fajr', 3: 'dhuhr', 4: 'asr', 5: 'maghrib', 6: 'isha' };
+const PRAYER_IDX = [1, 3, 4, 5, 6];
+const PREVIEW = new URLSearchParams(location.search).get('prayer'); // ?prayer=fajr|dhuhr|asr|maghrib|isha to preview a painting
 
 async function loadToday() {
   const c0 = city, z = zoned(c0.z);
@@ -153,43 +149,32 @@ async function loadToday() {
   if (city !== c0) return; // city changed while loading
   state.times = a || null; state.tmrw = b || null; state.yday = c || null;
   state.status = a ? 'ok' : a === undefined ? 'offline' : 'nodata';
-  state.next = -1; state.phase = '';
+  state.next = -1;
   renderStatic(); tick(true);
 }
 
-function phaseOf(s) {
-  const T = state.times;
-  if (s < sec(T[1]) || s >= sec(T[6])) return 'night';
-  if (s < sec(T[2]) + 1200) return 'dawn';
-  if (s < sec(T[5]) - 2700) return 'day';
-  return 'dusk';
+/* the next prayer's painting arrives as its line drawing on the construction grid, then fills in */
+let artName = '', artTimer;
+function setArt(name, animate) {
+  if (name === artName) return;
+  artName = name;
+  const hero = $('#sky'), paint = $('#paint'), lines = $('#lines');
+  clearTimeout(artTimer);
+  paint.classList.remove('show');
+  lines.src = `assets/senja/${name}-lines.webp`;
+  paint.src = `assets/senja/${name}.webp`;
+  lines.classList.add('show');
+  if (animate && !RM) { hero.classList.remove('drawing'); void hero.offsetWidth; hero.classList.add('drawing'); }
+  artTimer = setTimeout(() => paint.classList.add('show'), animate && !RM ? 1900 : 0);
 }
 
-/* sun along the arc, sunrise to sunset */
-const A = { x0: 10, y0: 76, cx: 170, cy: -16, x1: 330, y1: 76 };
-let sunT = -1, sunAnim;
-function drawSun(k) {
-  const u = 1 - k, x = u * u * A.x0 + 2 * u * k * A.cx + k * k * A.x1, y = u * u * A.y0 + 2 * u * k * A.cy + k * k * A.y1;
-  const qx = A.x0 + k * (A.cx - A.x0), qy = A.y0 + k * (A.cy - A.y0);
-  $('#sun').setAttribute('x', (x - 24).toFixed(1)); $('#sun').setAttribute('y', (y - 24).toFixed(1));
-  $('#sunpath').setAttribute('d', `M${A.x0} ${A.y0} Q${qx.toFixed(1)} ${qy.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}`);
-}
-function moveSun(to) {
-  if (Math.abs(to - sunT) < 0.002) return;
-  cancelAnimationFrame(sunAnim);
-  if (RM || sunT < 0) { sunT = to; drawSun(to); return; }
-  const from = sunT, start = performance.now(), dur = 1400;
-  (function step(now) { const k = Math.min(1, (now - start) / dur), e = 1 - Math.pow(1 - k, 3); sunT = from + (to - from) * e; drawSun(sunT); if (k < 1) sunAnim = requestAnimationFrame(step); })(start);
+/* "1 hr 2 min" style, rounded up so it never reads 0 min before the time */
+function human(s) {
+  const m = Math.ceil(s / 60), h = Math.floor(m / 60), r = m % 60;
+  return h ? (r ? t('dur.hm', { h, m: r }) : t('dur.h', { h })) : t('dur.m', { m: r });
 }
 
-const SKY_TOP = { dawn: '#2B3A67', day: '#1F67A3', dusk: '#33284F', night: '#070D1F' };
-function setPhaseClass(ph) {
-  $('#sky').className = 'hdr sky-' + ph;
-  document.body.classList.remove('ph-dawn', 'ph-day', 'ph-dusk', 'ph-night');
-  document.body.classList.add('ph-' + ph);
-  $('#themecolor').setAttribute('content', SKY_TOP[ph]);
-}
-let lastCount = '';
+let lastMin = -1;
 function tick(force) {
   if (!city) return;
   const z = zoned(city.z);
@@ -197,32 +182,34 @@ function tick(force) {
   if (state.status !== 'ok') return;
   const T = state.times, s = z.s;
 
-  const ph = SKY_OVERRIDE && /^(dawn|day|dusk|night)$/.test(SKY_OVERRIDE) ? SKY_OVERRIDE : phaseOf(s);
-  if (ph !== state.phase) { state.phase = ph; setPhaseClass(ph); }
-  const rise = sec(T[2]), set = sec(T[5]), up = ph !== 'night' && s >= rise - 1800 && s <= set + 1800;
-  $('#sun').style.opacity = up ? 1 : 0; $('#sunpath').style.opacity = up ? 1 : 0;
-  moveSun(Math.min(1, Math.max(0, (s - rise) / (set - rise))));
-
   const n = computeNext(T, state.yday, state.tmrw, s);
   if (n.i !== state.next || force) {
     const changed = state.next !== -1 && n.i !== state.next;
     state.next = n.i; state.nextTomorrow = n.tomorrow;
-    $('#hnext').textContent = t('next', { n: pname(n.i) });
+    $('#hname').textContent = pname(n.i);
+    $('#har').textContent = AR[n.i];
     $('#htime').textContent = n.tomorrow ? (state.tmrw ? state.tmrw[1] : '--:--') : T[n.i];
     $('#htmrw').textContent = n.tomorrow ? t('tomorrow') : '';
     $('#mname2').textContent = `${pname(n.i)} ${$('#htime').textContent}`;
-    if (changed) { restart($('#hnext'), 'swap'); restart($('#htime'), 'swap'); buzz(10); }
+    setArt(PREVIEW && Object.values(ART).includes(PREVIEW) ? PREVIEW : ART[n.i], changed);
+    if (changed) { restart($('.plate'), 'swap'); buzz(10); }
     if (state.selOffset === 0) drawList();
+    lastMin = -1;
   }
 
-  if (n.target == null) { $('#hcount').textContent = '--:--:--'; return; }
-  const left = Math.max(0, n.target - s), txt = fmtDur(left);
-  $('#hcount').innerHTML = [...txt].map((c, i) => (lastCount && c !== lastCount[i] && !RM ? `<span class="digit">${c}</span>` : c)).join('');
-  lastCount = txt;
-  $('#mcount').textContent = `${t('in')} ${txt}`;
+  if (n.target == null) { $('#hcount').textContent = ''; $('#ringmin').textContent = ''; return; }
+  const left = Math.max(0, n.target - s), min = Math.ceil(left / 60);
+  const k = Math.min(1, Math.max(0, (s - n.prev) / (n.target - n.prev)));
   $('#sky').classList.toggle('is-soon', left <= 1800);
   const bar = $('.pr.next .bar');
-  if (bar) bar.style.width = Math.min(100, Math.max(0, ((s - n.prev) / (n.target - n.prev)) * 100)).toFixed(2) + '%';
+  if (bar) bar.style.width = (k * 100).toFixed(2) + '%';
+  if (min === lastMin && !force) return;
+  lastMin = min;
+  $('#hcount').textContent = human(left);
+  $('#mcount').textContent = `${t('in')} ${human(left)}`;
+  $('#ringmin').textContent = min >= 60 ? Math.floor(min / 60) + 'h' : min + 'm';
+  $('#ringarc').setAttribute('stroke-dasharray', `${(k * 100).toFixed(1)} 100`);
+  drawSun(s);
 }
 
 /* a traveller leading a camel walks along the progress bar. Every limb is its own group pivoting on
@@ -237,61 +224,105 @@ function renderStatic() {
   $('#today').textContent = dateFmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(utcNoon(td));
   let hijri = '';
   try { hijri = dateFmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'islamic-umalqura').format(utcNoon(td)); } catch (e) {}
-  $('#hijri').textContent = hijri ? t('hijri', { d: hijri }) : '';
-  $('#rise').textContent = state.times ? state.times[2] : '--:--';
-  $('#set').textContent = state.times ? state.times[5] : '--:--';
+  $('#hijri').textContent = hijri;
   if (state.status !== 'ok') {
-    $('#hnext').textContent = ''; $('#htime').textContent = '--:--'; $('#htmrw').textContent = ''; $('#hcount').textContent = '--:--:--';
-    $('#sun').style.opacity = 0; $('#sunpath').style.opacity = 0;
+    $('#hname').textContent = '—'; $('#har').textContent = ''; $('#htime').textContent = '--:--'; $('#htmrw').textContent = ''; $('#hcount').textContent = '';
   }
-  drawWeek(); drawList();
+  drawWeek(); drawList(); drawSun(); drawQibla();
 }
+
+/* imsak and sunrise are not prayers: one line under the date. The five prayers are numbered steps */
+const extraLine = (T) => (T ? `${t('pr.imsak')} ${T[0]} · ${t('pr.terbit')} ${T[2]}` : '');
+const stepsHtml = (T, { now = null, nxt = -1 } = {}) => PRAYER_IDX.map((k, i) => {
+  const cls = nxt === k ? 'next' : now != null && sec(T[k]) <= now ? 'past' : '';
+  return `<li class="pr ${cls}" style="--i:${i}"><span class="num" aria-hidden="true">0${i + 1}</span>`
+    + `<span class="nm">${pname(k)}<span class="ar" lang="ar" dir="rtl">${AR[k]}</span></span>`
+    + `<span class="tm">${T[k]}</span>${nxt === k ? '<span class="bar" aria-hidden="true">' + WALKER + '</span>' : ''}</li>`;
+}).join('');
 
 async function drawList() {
   const box = $('#list');
-  if (state.status === 'loading') { box.innerHTML = `<p class="state">${t('loading')}</p>`; return; }
+  if (state.status === 'loading') { box.innerHTML = `<li class="state">${t('loading')}</li>`; $('#extra').textContent = ''; return; }
   const off = state.selOffset, isToday = off === 0;
   let T = state.times;
   if (!isToday) {
     T = await timesFor(city.id, shift(state.today.y, state.today.m, state.today.d, off));
     if (state.selOffset !== off) return; // another day was picked while loading
   }
+  $('#extra').textContent = extraLine(T);
   if (!T) {
     const y = isToday ? state.today.y : shift(state.today.y, state.today.m, state.today.d, state.selOffset).y;
-    box.innerHTML = `<p class="state">${T === undefined || state.status === 'offline' ? t('offlinenodata') : t('nodata', { y })}</p>`;
+    box.innerHTML = `<li class="state">${T === undefined || state.status === 'offline' ? t('offlinenodata') : t('nodata', { y })}</li>`;
     return;
   }
-  const now = zoned(city.z).s, nxt = isToday && !state.nextTomorrow ? state.next : -1;
-  box.innerHTML = KEYS.map((k, i) => {
-    const cls = !isToday ? '' : nxt === i ? 'next' : (sec(T[i]) <= now ? 'past' : '');
-    const sub = nxt === i ? t('sub.next') : (k === 'imsak' || k === 'terbit') ? t('sub.' + k) : '';
-    return `<div class="pr ${cls}" style="--i:${i}">
-<svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">${ICON[k]}</svg>
-<span class="nm">${pname(i)}${sub ? `<small>${sub}</small>` : ''}</span>
-<span class="tm">${T[i]}</span>${nxt === i ? '<span class="bar" aria-hidden="true">' + WALKER + '</span>' : ''}</div>`;
-  }).join('');
+  box.innerHTML = isToday ? stepsHtml(T, { now: zoned(city.z).s, nxt: state.nextTomorrow ? -1 : state.next }) : stepsHtml(T);
   tick();
 }
 
 /* week strip around today (in the city's zone) */
-function slide(ind, el, box) { if (!ind || !el) return; const r = el.getBoundingClientRect(), b = box.getBoundingClientRect(); ind.style.width = r.width + 'px'; ind.style.transform = `translateX(${r.left - b.left}px)`; }
-const placeWeek = () => slide($('#week .ind'), $('.wd[aria-pressed="true"]'), $('#week'));
-const placeTab = () => slide($('.tabbar .ind'), $('.tab[aria-selected="true"]'), $('.tabbar'));
 function drawWeek() {
   const td = state.today, wd = dateFmt({ weekday: 'short' }), full = dateFmt({ weekday: 'long', day: 'numeric', month: 'long' });
-  $('#week').innerHTML = '<span class="ind" aria-hidden="true"></span>' + [-3, -2, -1, 0, 1, 2, 3].map((o) => {
+  $('#week').innerHTML = [-3, -2, -1, 0, 1, 2, 3].map((o) => {
     const d = shift(td.y, td.m, td.d, o), dt = utcNoon(d);
     return `<button class="wd" data-o="${o}" aria-pressed="${o === state.selOffset}" aria-label="${full.format(dt)}"><span>${wd.format(dt).replace('.', '')}</span><b>${d.d}</b></button>`;
   }).join('');
-  requestAnimationFrame(placeWeek);
 }
 $('#week').addEventListener('click', (e) => {
   const b = e.target.closest('.wd');
   if (!b || b.getAttribute('aria-pressed') === 'true') return;
   state.selOffset = +b.dataset.o;
   $$('.wd').forEach((x) => x.setAttribute('aria-pressed', x === b));
-  placeWeek(); buzz(6); drawList();
+  buzz(6); drawList();
 });
+
+/* ---------- the sun today: arc from sunrise to sunset, prayer marks on the horizon ---------- */
+// drawn at the chart's real width so labels keep their size; Asr and Isha sit on a second row so names never collide
+const HZ = 150, PEAK = -110, LOW = new Set([4, 6]);
+function drawSun(now) {
+  const T = state.times, svg = $('#sunchart');
+  if (!T) { svg.innerHTML = ''; return; }
+  const W = Math.round(svg.clientWidth) || 600, SX0 = W * 0.14, SX1 = W * 0.86, MID = (SX0 + SX1) / 2;
+  const s = now ?? zoned(city.z).s, rise = sec(T[2]), set = sec(T[5]);
+  const xAt = (v) => SX0 + ((v - rise) / (set - rise)) * (SX1 - SX0);
+  const pt = (k) => { const u = 1 - k; return [u * u * SX0 + 2 * u * k * MID + k * k * SX1, u * u * HZ + 2 * u * k * PEAK + k * k * HZ]; };
+  const k = Math.min(1, Math.max(0, (s - rise) / (set - rise))), up = s > rise && s < set, [sx, sy] = pt(k);
+  const qx = SX0 + k * (MID - SX0), qy = HZ + k * (PEAK - HZ);
+  const marks = PRAYER_IDX.map((i) => {
+    const x = Math.min(W - 1, Math.max(1, xAt(sec(T[i])))), dy = LOW.has(i) ? 42 : 0;
+    const anchor = x < 40 ? 'start' : x > W - 40 ? 'end' : 'middle', tx = anchor === 'start' ? 0 : anchor === 'end' ? W : x;
+    return `<line class="mk" x1="${x.toFixed(1)}" y1="${HZ - 6}" x2="${x.toFixed(1)}" y2="${HZ + 6 + dy}"/>`
+      + `<text x="${tx.toFixed(1)}" y="${HZ + 22 + dy}" text-anchor="${anchor}">${pname(i).toUpperCase()}</text><text class="t" x="${tx.toFixed(1)}" y="${HZ + 40 + dy}" text-anchor="${anchor}">${T[i]}</text>`;
+  }).join('');
+  svg.setAttribute('viewBox', `0 0 ${W} ${HZ + 90}`);
+  svg.innerHTML = `<line class="hz" x1="0" y1="${HZ}" x2="${W}" y2="${HZ}"/>`
+    + `<path class="arcbg" d="M${SX0} ${HZ} Q${MID} ${PEAK} ${SX1} ${HZ}"/>`
+    + (up || s >= set ? `<path class="arcdone" d="M${SX0} ${HZ} Q${qx.toFixed(1)} ${qy.toFixed(1)} ${sx.toFixed(1)} ${sy.toFixed(1)}"/>` : '')
+    + (up ? `<circle class="gc" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="18"/><circle class="gc" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="28"/><circle class="disc" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="10"/>` : '')
+    + marks;
+  svg.setAttribute('aria-label', t('aria.sun', { r: T[2], s: T[5] }));
+  const day = set - rise;
+  $('#daylen').textContent = t('dur.hm', { h: Math.floor(day / 3600), m: Math.round((day % 3600) / 60) });
+  $('#dayspan').textContent = t('sun.span', { r: T[2], s: T[5] });
+  if (s < set) { $('#setlabel').textContent = t('sun.setsin'); $('#setin').textContent = human(set - s); }
+  else { $('#setlabel').textContent = t('sun.risesin'); $('#setin').textContent = state.tmrw ? human(sec(state.tmrw[2]) + 86400 - s) : '--'; }
+}
+
+/* qibla: great-circle bearing from the city to the Kaaba, computed on the device */
+const KAABA = [21.4225, 39.8262];
+function drawQibla() {
+  if (city.lat == null) { $('.qibla').hidden = true; return; }
+  $('.qibla').hidden = false;
+  const R = Math.PI / 180, [la1, lo1] = [city.lat * R, city.lon * R], [la2, lo2] = [KAABA[0] * R, KAABA[1] * R];
+  const y = Math.sin(lo2 - lo1) * Math.cos(la2), x = Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(lo2 - lo1);
+  const deg = (Math.atan2(y, x) / R + 360) % 360;
+  const a = Math.sin((la2 - la1) / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin((lo2 - lo1) / 2) ** 2;
+  const km = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const dir = t('dirs').split(',')[Math.round(deg / 22.5) % 16];
+  $('#qdeg').textContent = `${Math.round(deg)}°`;
+  $('#qdist').textContent = t('qibla.note', { d: dir, km: Math.round(km).toLocaleString(LOC()) });
+  $('#needle').style.transform = `rotate(${deg.toFixed(1)}deg)`;
+  $('#compass').setAttribute('aria-label', t('aria.qibla', { n: Math.round(deg), d: dir }));
+}
 
 /* ---------- location ---------- */
 const CHK = '<svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
@@ -315,11 +346,11 @@ function drawCities() {
 }
 function setZone(z) { zoneFilter = z; $$('#zones button').forEach((x) => x.setAttribute('aria-pressed', x.dataset.z === z)); }
 function renderLoc(animate) {
-  $('#locname').textContent = shortName(city.n);
+  $('#locname').textContent = city.n;
   $('#loczone').textContent = city.z;
   if (animate) { restart($('#locname'), 'swap'); restart($('#loczone'), 'swap'); }
   $('#locbtn').setAttribute('aria-label', t('aria.loc', { c: shortName(city.n), z: city.z }));
-  $('#mloc').textContent = `${shortName(city.n)} · ${city.z}`;
+  $('#mloc').textContent = `${city.n} · ${city.z}`;
   $('#curcity').textContent = t('city.current', { c: city.n, p: city.p, z: city.z });
   $('#notice').hidden = !estimated;
   // the city page's own text only fits while its city and language are shown
@@ -384,9 +415,9 @@ $('#gps').addEventListener('click', () => {
   { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
 });
 
+
 /* ---------- month ---------- */
 let mView = null, mData = null;
-const MP = [[1, 'subuh'], [3, 'dzuhur'], [4, 'ashar'], [5, 'maghrib'], [6, 'isya']];
 async function drawMonth(dir) {
   if (!city) return;
   if (!mView) { const z = zoned(city.z); mView = { y: z.y, m: z.m }; }
@@ -400,21 +431,26 @@ async function drawMonth(dir) {
   if (!mView.d || mView.d > n) mView.d = here ? z.d : 1;
   // Monday-first week; 2024-01-01 was a Monday
   const wd = dateFmt({ weekday: 'short' }), lead = (utcNoon({ y, m, d: 1 }).getUTCDay() + 6) % 7, full = dateFmt({ weekday: 'long', day: 'numeric', month: 'long' });
-  grid.innerHTML = Array.from({ length: 7 }, (_, i) => `<span class="wd" aria-hidden="true">${wd.format(utcNoon({ y: 2024, m: 1, d: i + 1 }))}</span>`).join('')
+  grid.innerHTML = Array.from({ length: 7 }, (_, i) => `<span class="wd" aria-hidden="true">${wd.format(utcNoon({ y: 2024, m: 1, d: i + 1 })).replace('.', '')}</span>`).join('')
     + '<span></span>'.repeat(lead)
     + Array.from({ length: n }, (_, i) => {
       const d = i + 1, cls = here && d === z.d ? 'today' : here && d < z.d || y * 12 + m < z.y * 12 + z.m ? 'past' : '';
-      return `<button type="button" class="cday ${cls}" data-d="${d}" aria-pressed="${d === mView.d}" aria-label="${full.format(utcNoon({ y, m, d }))}">${d}</button>`;
+      return `<button type="button" class="cday ${cls}" style="animation-delay:${i * 8}ms" data-d="${d}" aria-pressed="${d === mView.d}" aria-label="${full.format(utcNoon({ y, m, d }))}">${d}</button>`;
     }).join('');
   drawDay();
-  if (dir && !RM) { grid.className = 'cgrid'; void grid.offsetWidth; grid.className = 'cgrid ' + (dir > 0 ? 'from-right' : 'from-left'); }
+  // the gold grid redraws, then the dates slide in from the side you moved toward
+  if (dir && !RM) {
+    restart($('.mcal'), 'drawing');
+    grid.className = 'cgrid'; void grid.offsetWidth; grid.className = 'cgrid ' + (dir > 0 ? 'from-right' : 'from-left');
+  }
 }
 function drawDay() {
   const { y, m, d } = mView, box = $('#mday'), z = zoned(city.z);
   if (!mData) { box.innerHTML = `<p class="state">${mData === undefined ? t('offlinenodata') : t('nodata', { y })}</p>`; return; }
   const T = mData.days[doy(y, m, d)], today = z.y === y && z.m === m && z.d === d;
   box.innerHTML = `<h2>${dateFmt({ weekday: 'long', day: 'numeric', month: 'long' }).format(utcNoon({ y, m, d }))}${today ? ' · ' + t('month.today') : ''}</h2>`
-    + MP.map(([k, p]) => `<div class="mrow"><span>${t('pr.' + p)}</span><b>${T ? T[k] : '--:--'}</b></div>`).join('');
+    + (T ? `<p class="extra">${extraLine(T)}</p><ol class="steps">${stepsHtml(T)}</ol>` : `<p class="state">${t('nodata', { y })}</p>`)
+    + `<p class="foot">${t('foot')}</p>`;
 }
 $('#days').addEventListener('click', (e) => {
   const b = e.target.closest('.cday'); if (!b) return;
@@ -433,21 +469,21 @@ function go(id) {
   const dir = ORDER.indexOf(id) > ORDER.indexOf(cur) ? 'from-right' : 'from-left';
   cur = id;
   $$('.screen').forEach((s) => { s.classList.remove('on', 'from-right', 'from-left'); if (s.id === id) s.classList.add('on', dir); });
-  $$('.tab').forEach((x) => x.setAttribute('aria-selected', x.dataset.go === id));
-  document.body.classList.toggle('on-city', id === 'city');
-  placeTab(); window.scrollTo(0, 0); $('#mini').classList.remove('show');
-  if (id === 'home') requestAnimationFrame(placeWeek);
-  if (id === 'city') { setZone(city.z); $('#q').value = ''; gpsMsg(); drawCities(); const box = $('#cities'), me = box.querySelector('.city[aria-current="true"]'); box.scrollTop = me ? me.offsetTop - box.clientHeight / 2 + me.offsetHeight / 2 : 0; }
-  if (id === 'month') { const z = zoned(city.z); mView = { y: z.y, m: z.m }; drawMonth(); }
+  $$('.stop').forEach((x) => x.setAttribute('aria-current', x.dataset.go === id ? 'page' : 'false'));
+  window.scrollTo(0, 0); $('#mini').classList.remove('show');
+  if (id === 'city') { setZone(city.z); $('#q').value = ''; gpsMsg(); drawCities(); const me = $('#cities .city[aria-current="true"]'); if (me) me.scrollIntoView({ block: 'center' }); window.scrollTo(0, 0); }
+  if (id === 'home' && state.times) drawSun();
+  if (id === 'month') { const z = zoned(city.z); mView = { y: z.y, m: z.m }; drawMonth(); if (!RM) restart($('.mcal'), 'drawing'); }
 }
 $$('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
 new IntersectionObserver(([e]) => $('#mini').classList.toggle('show', cur === 'home' && !e.isIntersecting), { rootMargin: '-120px 0px 0px 0px' }).observe($('#sky'));
 
 /* ---------- theme ---------- */
+const isDark = () => { const r = document.documentElement; return r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+const themeColor = () => $('#themecolor').setAttribute('content', isDark() ? '#1D1F21' : '#F2E6C9');
 $('#theme').addEventListener('click', (e) => {
-  const r = document.documentElement;
-  const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  const apply = () => { r.dataset.theme = dark ? 'light' : 'dark'; store.set('theme', r.dataset.theme); };
+  const r = document.documentElement, dark = isDark();
+  const apply = () => { r.dataset.theme = dark ? 'light' : 'dark'; store.set('theme', r.dataset.theme); themeColor(); };
   buzz(8);
   if (!document.startViewTransition || RM) return apply();
   const b = e.currentTarget.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2;
@@ -463,18 +499,18 @@ function applyLang() {
   $$('[data-i18n]').forEach((e) => { e.textContent = t(e.dataset.i18n); });
   $$('[data-i18n-label]').forEach((e) => e.setAttribute('aria-label', t(e.dataset.i18nLabel)));
   $$('[data-i18n-ph]').forEach((e) => e.setAttribute('placeholder', t(e.dataset.i18nPh)));
-  $('#langcode').textContent = LANG.toUpperCase();
+  $('#langcode').textContent = LANG === 'id' ? 'EN' : 'ID'; // shows the language a tap switches to
   $('#lang').setAttribute('aria-label', t('aria.lang'));
-  $('#arc').setAttribute('aria-label', t('aria.arc'));
+  $('#hnext').textContent = t('nextprayer');
   $('#hin').textContent = t('in');
   $('#alllink').setAttribute('href', SECTIONS[LANG]);
   if (!$('#gps').hasAttribute('aria-busy')) $('#gpslabel').textContent = t('gps.btn');
   gpsMsg();
   net();
   if (city) { renderLoc(false); drawCities(); if (state.today) renderStatic(); state.next = -1; tick(true); drawMonth(); }
-  requestAnimationFrame(placeTab);
 }
 $('#lang').addEventListener('click', () => { LANG = LANG === 'id' ? 'en' : 'id'; store.set('lang', LANG); applyLang(); buzz(6); toast(t('t.lang')); });
+
 
 /* ---------- connection ---------- */
 function net() { const n = $('#net'); if (navigator.onLine) { n.classList.remove('show'); return; } n.textContent = t('offline'); n.classList.add('show'); }
@@ -517,8 +553,10 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   }).catch(() => {});
 }
 
+
 /* ---------- boot ---------- */
-$('#stars').innerHTML = Array.from({ length: 34 }, (_, i) => `<i class="${i % 5 ? '' : 'b'}" style="left:${(i * 37) % 100}%;top:${(i * 53) % 100}%;animation-delay:${(i % 7) * 0.45}s"></i>`).join('');
+themeColor();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', themeColor);
 applyLang();
 drawList();
 try {
@@ -532,9 +570,8 @@ if (CITIES.length) {
   applyCity(first, { save: first.id === PAGE_CITY && !store.get('city'), animate: false });
 } else {
   state.status = 'offline'; $('#locname').textContent = '—'; drawCities();
-  $('#list').innerHTML = `<p class="state">${t('city.loadfail')}</p>`;
+  $('#list').innerHTML = `<li class="state">${t('city.loadfail')}</li>`;
 }
 setInterval(() => tick(), 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(true); });
-addEventListener('resize', () => { placeWeek(); placeTab(); });
-if (document.fonts) document.fonts.ready.then(() => { placeWeek(); placeTab(); });
+addEventListener('resize', () => { if (state.times) drawSun(); });

@@ -18,12 +18,8 @@ const SHELL_FILES = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',
-  'assets/meteocons/clear-day.svg',
-  'assets/meteocons/cloudy.svg',
-  'assets/meteocons/moon-waxing-crescent.svg',
-  'assets/meteocons/sunrise.svg',
-  'assets/meteocons/sunset.svg',
-  ...[400, 500, 600, 700, 800].map((w) => `assets/fonts/plus-jakarta-sans-latin-${w}-normal.woff2`),
+  ...['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].flatMap((p) => [`assets/senja/${p}.webp`, `assets/senja/${p}-lines.webp`]),
+  ...['jost-latin-300', 'jost-latin-400', 'jost-latin-500', 'sora-latin-400', 'sora-latin-500', 'sora-latin-600', 'amiri-arabic-400'].map((f) => `assets/fonts/${f}-normal.woff2`),
 ];
 
 self.addEventListener('install', (e) => {

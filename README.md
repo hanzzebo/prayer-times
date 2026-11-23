@@ -56,7 +56,7 @@ The app only loads files from its own site. It has no analytics, sets no cookies
 
 The app speaks Bahasa Indonesia and English. It starts in the phone's language, and the globe button switches between them.
 
-The sky in the header follows the time of day. To see a particular scene, add `?sky=dawn`, `?sky=day`, `?sky=dusk` or `?sky=night` to the URL.
+The painting in the header is the next prayer's. To see a particular one, add `?prayer=fajr`, `dhuhr`, `asr`, `maghrib` or `isha` to the URL.
 
 The Hijri date is calculated by the browser with the Umm al-Qura calendar. Treat it as an estimate: it can be a day off from Indonesia's official date, which the government sets at the sidang isbat.
 
@@ -64,5 +64,4 @@ The Hijri date is calculated by the browser with the Umm al-Qura calendar. Treat
 
 - Prayer times: Kementerian Agama RI (Bimas Islam), served by [api.myquran.com](https://api.myquran.com). That service is run by the community; it is not an official government API.
 - City coordinates: © OpenStreetMap contributors, through Nominatim.
-- Weather icons: [Meteocons](https://github.com/basmilius/meteocons) by Bas Milius, MIT License (`assets/meteocons/LICENSE`).
-- Font: [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans), SIL Open Font License 1.1 (`assets/fonts/OFL.txt`).
+- Fonts: [Jost](https://github.com/indestructible-type/Jost), [Sora](https://github.com/sora-xor/sora-font) and [Amiri](https://github.com/aliftype/amiri), SIL Open Font License 1.1 (`assets/fonts/OFL-*.txt`).
