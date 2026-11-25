@@ -22,6 +22,9 @@
 
 *{box-sizing:border-box;margin:0}
 html,body{overflow-x:clip}
+/* swipe-first app: no scroll bars anywhere, any element, any page */
+*{scrollbar-width:none}
+*::-webkit-scrollbar{display:none}
 body{background:var(--bg);color:var(--ink);font-family:var(--sora);-webkit-font-smoothing:antialiased;transition:background-color .3s ease,color .3s ease}
 button{font:inherit;color:inherit;cursor:pointer}
 a{color:var(--accent)}
@@ -323,8 +326,7 @@ button:not(:disabled):active{transform:scale(.96)}
   .cpin{position:sticky;top:0;z-index:5;display:flex;flex-direction:column;gap:8px;margin:0 -16px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--rule)}
   .gps{flex:none;width:48px;height:48px;padding:0;border-radius:50%}
   #gpslabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  .provs{overflow-x:auto;margin:0 -16px;padding:0 16px;scrollbar-width:none}
-  .provs::-webkit-scrollbar{display:none}
+  .provs{overflow-x:auto;margin:0 -16px;padding:0 16px}
 }
 
 /* ---------- month ---------- */
@@ -451,8 +453,7 @@ button:not(:disabled):active{transform:scale(.96)}
 .drawing .lp{stroke-dasharray:1;animation:draw 1.2s var(--ease) both}
 .ldot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--persimmon);box-shadow:0 0 0 3px var(--bg)}
 .ld{margin-top:4px;font-size:12px;color:var(--muted)}
-#mskies{list-style:none;padding:0;margin:14px -16px 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,42%);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:0 16px;scrollbar-width:none}
-#mskies::-webkit-scrollbar{display:none}
+#mskies{list-style:none;padding:0;margin:14px -16px 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,42%);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;padding:0 16px}
 #mskies li{scroll-snap-align:start}
 @media (min-width:700px){#mskies{margin:14px 0 0;padding:0;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible}}
 
