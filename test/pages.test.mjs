@@ -71,7 +71,7 @@ test('sitemap lists home, both city lists and every city page in both languages'
 test('home page gets canonical and preview tags, list pages drop the app script', () => {
   const files = build();
   assert.match(files['index.html'], /<link rel="canonical" href="https:\/\/example.github.io\/prayer-times\/">/);
-  assert.match(files['jadwal-sholat/index.html'], /<h2>Jawa Barat<\/h2>/);
+  assert.match(files['jadwal-sholat/index.html'], /<h2 class="grp">Jawa Barat<\/h2>/);
   assert.doesNotMatch(files['jadwal-sholat/index.html'], /js\/app.js/);
 });
 

@@ -156,7 +156,7 @@ export function buildSite({ shell, cities, base, now = new Date(), daysOf }) {
 
     // list of every city, grouped by province
     const depth = SECTIONS[lang].split('/').length - 1;
-    const groups = [...byProv].map(([p, list]) => `<h2>${esc(p)}</h2>\n<ul>${list.map((c) => `<li><a href="${href(lang, c)}">${esc(placeName(c.n, lang))}</a></li>`).join('')}</ul>`).join('\n');
+    const groups = [...byProv].map(([p, list]) => `<h2 class="grp">${esc(p)}</h2>\n<div class="pcities">${list.map((c) => `<a class="city" href="${href(lang, c)}">${esc(placeName(c.n, lang))}<small>${c.z}</small></a>`).join('')}</div>`).join('\n');
     const listPage = page(shell, base, { lang, depth, title: s.listTitle, desc: s.listDesc, url: listAlt[lang], alt: listAlt });
     files[`${SECTIONS[lang]}index.html`] = swap(listPage, /<body>[\s\S]*<\/body>/, () => `<body>\n<main class="pages"><section class="seo">\n<h1>${s.listH1}</h1>\n<p>${s.listIntro}</p>\n<p><a href="./">${s.open}</a> · <a href="${SECTIONS[other]}" hreflang="${other}">${s.switchTo}</a></p>\n${groups}\n</section></main>\n</body>`);
     sitemap.push(urlEntry(listAlt[lang], listAlt));
