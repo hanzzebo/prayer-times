@@ -13,7 +13,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Jadwal Sholat">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preload" href="assets/fonts/jost-latin-300-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/styles.css">
@@ -37,9 +38,14 @@ try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')documen
 <section class="screen on" id="home" data-i18n-label="aria.home">
 <div class="hero" id="sky">
 <div class="art" aria-hidden="true">
-<svg class="grid" viewBox="0 0 390 470" preserveAspectRatio="xMidYMid slice"><g fill="none" stroke-width="1"><circle cx="278" cy="255" r="42" pathLength="1"/><circle cx="278" cy="255" r="72" pathLength="1"/><circle cx="278" cy="255" r="112" pathLength="1"/><circle cx="278" cy="255" r="160" pathLength="1"/><line x1="278" y1="0" x2="278" y2="470" pathLength="1"/><line x1="0" y1="330" x2="390" y2="330" pathLength="1"/></g></svg>
+<div class="frame">
+<img class="paint" id="paint0" src="assets/senja/asr.webp" alt="" decoding="async">
 <img class="paint" id="paint" src="assets/senja/asr.webp" alt="" decoding="async">
 <img class="lines" id="lines" src="assets/senja/asr-lines.webp" alt="" decoding="async">
+<svg class="grid" viewBox="0 0 1800 1004"><g fill="none"><circle cx="1191" cy="530" r="86" pathLength="1"/><circle cx="1191" cy="530" r="150" pathLength="1"/><circle cx="1191" cy="530" r="235" pathLength="1"/><circle cx="1191" cy="530" r="342" pathLength="1"/><line class="d" x1="1191" y1="0" x2="1191" y2="1004"/><line class="d" x1="0" y1="530" x2="1800" y2="530"/></g></svg>
+</div>
+<svg class="flow ph" viewBox="0 0 390 470" preserveAspectRatio="none"><g fill="none"><path d="M-39 150.4C97.5 56.4 175.5 235 429 103.4"/><path d="M-39 178.6C117 94 195 263.2 429 141"/><path d="M-39 206.8C136.5 131.6 214.5 282 429 178.6"/></g></svg>
+<svg class="flow dk" viewBox="0 0 1440 560" preserveAspectRatio="xMidYMax slice"><g fill="none"><path d="M-144 179.2C360 67.2 648 280 1584 123.2"/><path d="M-144 212.8C432 112 720 313.6 1584 168"/><path d="M-144 246.4C504 156.8 792 336 1584 212.8"/></g></svg>
 </div>
 <div class="hdr-top">
 <button class="loc" data-go="city" id="locbtn"><span id="locname">…</span> · <span id="loczone"></span></button>
@@ -55,29 +61,43 @@ try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')documen
 <p class="kick"><span class="ring" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15"/><circle id="ringarc" cx="18" cy="18" r="15" pathLength="100" stroke-dasharray="0 100"/></svg><b id="ringmin"></b></span><span id="hnext"></span><span class="soon-chip" data-i18n="soon"></span></p>
 <div class="title"><h1 id="hname">—</h1><span class="ar" lang="ar" dir="rtl" id="har"></span><svg class="khatam" width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><g fill="none" stroke-width="1.4"><rect x="7" y="7" width="16" height="16"/><rect x="7" y="7" width="16" height="16" transform="rotate(45 15 15)"/><circle cx="15" cy="15" r="3.2"/></g></svg></div>
 <p class="when"><span class="tm" id="htime">--:--</span><span class="tomorrow" id="htmrw"></span><span class="dot"> · </span><span id="hin"></span> <span id="hcount"></span></p>
+<p class="hdate dk" id="hdate"></p>
 <p class="net" id="net" role="status"></p>
 </div>
 </div>
 
 <div class="body">
 <div class="today">
+<h2 class="dk" data-i18n="month.today"></h2>
 <p class="date"><span id="today"></span><span id="hijri"></span></p>
 <p class="extra" id="extra"></p>
-<div class="week" role="group" id="week" data-i18n-label="aria.week"></div>
-<div class="notice" id="notice" hidden>
-<p><span data-i18n="notice.text"></span> <button class="linkbtn" data-go="city" data-i18n="notice.cta"></button></p>
-</div>
 <ol class="steps" id="list"></ol>
 </div>
 
 <section class="sun" id="sunbox" aria-labelledby="sunh">
 <h2 id="sunh" data-i18n="sun.title"></h2>
-<svg class="sunchart" id="sunchart" viewBox="0 0 600 200" role="img"></svg>
+<div class="sunchart" id="sunchart" role="img"></div>
 <dl class="facts">
 <div><dt data-i18n="sun.daylight"></dt><dd class="big" id="daylen">--</dd><dd id="dayspan"></dd></div>
 <div><dt id="setlabel" data-i18n="sun.setsin"></dt><dd class="big" id="setin">--</dd><dd data-i18n="sun.setnote"></dd></div>
 <div class="qibla"><svg id="compass" width="84" height="84" viewBox="0 0 84 84" role="img"><circle cx="42" cy="42" r="40" class="c1"/><circle cx="42" cy="42" r="30" class="c2"/><g class="ticks"><line x1="42" y1="8" x2="42" y2="14"/><line x1="76" y1="42" x2="70" y2="42"/><line x1="42" y1="76" x2="42" y2="70"/><line x1="8" y1="42" x2="14" y2="42"/></g><text x="42" y="23" text-anchor="middle">N</text><g id="needle"><path class="n1" d="M42 16 L46 42 L42 47 L38 42 Z"/><path class="n2" d="M42 47 L45 42 L42 64 L39 42 Z"/></g><circle cx="42" cy="42" r="3" class="hub"/></svg><div><dt data-i18n="qibla"></dt><dd class="big" id="qdeg">--</dd><dd id="qdist"></dd></div></div>
 </dl>
+</section>
+
+<section class="five dk" aria-labelledby="fiveh">
+<h2 id="fiveh" data-i18n="five.title"></h2>
+<ul>
+<li><div class="th" tabindex="0" data-k="1"><img class="thp" src="assets/senja/fajr.webp" alt="" loading="lazy"><img class="thk" src="assets/senja/fajr-lines.webp" alt="" loading="lazy"></div><span class="thl"><span class="thn"></span> <span class="tht"></span></span></li>
+<li><div class="th" tabindex="0" data-k="3"><img class="thp" src="assets/senja/dhuhr.webp" alt="" loading="lazy"><img class="thk" src="assets/senja/dhuhr-lines.webp" alt="" loading="lazy"></div><span class="thl"><span class="thn"></span> <span class="tht"></span></span></li>
+<li><div class="th" tabindex="0" data-k="4"><img class="thp" src="assets/senja/asr.webp" alt="" loading="lazy"><img class="thk" src="assets/senja/asr-lines.webp" alt="" loading="lazy"></div><span class="thl"><span class="thn"></span> <span class="tht"></span></span></li>
+<li><div class="th" tabindex="0" data-k="5"><img class="thp" src="assets/senja/maghrib.webp" alt="" loading="lazy"><img class="thk" src="assets/senja/maghrib-lines.webp" alt="" loading="lazy"></div><span class="thl"><span class="thn"></span> <span class="tht"></span></span></li>
+<li><div class="th" tabindex="0" data-k="6"><img class="thp" src="assets/senja/isha.webp" alt="" loading="lazy"><img class="thk" src="assets/senja/isha-lines.webp" alt="" loading="lazy"></div><span class="thl"><span class="thn"></span> <span class="tht"></span></span></li>
+</ul>
+</section>
+
+<section class="mtable dk" id="mtable" aria-labelledby="mtitle">
+<div class="mthead"><h2 id="mtitle" aria-live="polite"></h2><div class="mnav"><button class="nav" id="tprev" data-i18n-label="month.prev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><button class="nav" id="tnext" data-i18n-label="month.next"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div></div>
+<div class="tscroll" id="tbody"></div>
 </section>
 
 <p class="foot" data-i18n="foot"></p>
@@ -88,19 +108,27 @@ try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')documen
 
 <section class="screen" id="city" data-i18n-label="aria.city">
 <header class="banner">
-<div class="art" aria-hidden="true"><svg class="grid" viewBox="0 0 390 150" preserveAspectRatio="xMidYMid slice"><g fill="none" stroke-width="1"><circle cx="258" cy="73" r="24" pathLength="1"/><circle cx="258" cy="73" r="44" pathLength="1"/><circle cx="258" cy="73" r="70" pathLength="1"/><circle cx="258" cy="73" r="104" pathLength="1"/><line x1="258" y1="0" x2="258" y2="150" pathLength="1"/><line x1="0" y1="108" x2="390" y2="108" pathLength="1"/></g></svg><img class="lines show" src="assets/senja/dhuhr-lines.webp" alt=""></div>
+<div class="art" aria-hidden="true" style="--px:70%;--py:62%"><div class="frame">
+<img class="lines" src="assets/senja/dhuhr-lines.webp" alt="">
+<svg class="grid" viewBox="0 0 1800 1004"><g fill="none"><circle cx="1191" cy="530" r="110" pathLength="1"/><circle cx="1191" cy="530" r="203" pathLength="1"/><circle cx="1191" cy="530" r="323" pathLength="1"/><circle cx="1191" cy="530" r="480" pathLength="1"/><line class="d" x1="1191" y1="0" x2="1191" y2="1004"/><line class="d" x1="0" y1="530" x2="1800" y2="530"/></g></svg>
+</div></div>
 <div class="plate"><h1 data-i18n="city.title"></h1><p id="curcity"></p></div>
 </header>
 <div class="cwrap">
-<label class="field"><span class="sr" data-i18n="city.search"></span><svg class="fico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="q" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" data-i18n-ph="city.ph"><button class="clear" id="qclear" type="button" data-i18n-label="city.clear"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>
-<button class="gps" id="gps"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span id="gpslabel" data-i18n="gps.btn"></span></button>
-<p class="gpsnote" id="gpsmsg" role="status" data-i18n="gps.note"></p>
+<div class="cside">
+<div class="cpin" id="cpin">
+<div class="crow"><label class="field"><span class="sr" data-i18n="city.search"></span><svg class="fico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="q" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" data-i18n-ph="city.ph"><button class="clear" id="qclear" type="button" data-i18n-label="city.clear"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></label>
+<button class="gps" id="gps"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span id="gpslabel" data-i18n="gps.btn"></span></button></div>
 <div class="zone" role="group" id="zones" data-i18n-label="city.zone">
 <button data-z="WIB" aria-pressed="false">WIB</button><button data-z="WITA" aria-pressed="false">WITA</button><button data-z="WIT" aria-pressed="false">WIT</button>
 </div>
+<nav class="provs" id="provs" data-i18n-label="city.provs"></nav>
+</div>
+<p class="gpsnote" id="gpsmsg" role="status" data-i18n="gps.note"></p>
 <p class="count" id="count" aria-live="polite"></p>
-<div class="clist" id="cities"></div>
 <p class="privacy" data-i18n="privacy"></p>
+</div>
+<div class="clist" id="cities"></div>
 </div>
 </section>
 
@@ -114,17 +142,19 @@ try{var th=localStorage.getItem('js.theme');if(th==='light'||th==='dark')documen
 </header>
 <div class="mbody">
 <div class="mcal">
-<svg class="mgrid" aria-hidden="true" viewBox="0 0 7 6" preserveAspectRatio="none"><g fill="none" stroke-width="0.012"><line x1="0" y1="1" x2="7" y2="1" pathLength="1"/><line x1="0" y1="2" x2="7" y2="2" pathLength="1"/><line x1="0" y1="3" x2="7" y2="3" pathLength="1"/><line x1="0" y1="4" x2="7" y2="4" pathLength="1"/><line x1="0" y1="5" x2="7" y2="5" pathLength="1"/><line x1="1" y1="0" x2="1" y2="6" pathLength="1"/><line x1="2" y1="0" x2="2" y2="6" pathLength="1"/><line x1="3" y1="0" x2="3" y2="6" pathLength="1"/><line x1="4" y1="0" x2="4" y2="6" pathLength="1"/><line x1="5" y1="0" x2="5" y2="6" pathLength="1"/><line x1="6" y1="0" x2="6" y2="6" pathLength="1"/></g></svg>
 <div class="cgrid" id="days" role="group" data-i18n-label="aria.week"></div>
 </div>
 <div class="mday" id="mday" aria-live="polite"></div>
 </div>
+<p class="mlegend" id="mlegend"></p>
+<section class="mlight" aria-labelledby="mlh"><h2 id="mlh" data-i18n="light.title"></h2><p class="msub" data-i18n="light.sub"></p><ul id="mlight"></ul></section>
+<section class="mskies" aria-labelledby="msh"><h2 id="msh"></h2><ul id="mskies"></ul></section>
 <p class="src" data-i18n="source"></p>
 </section>
 </div>
 
 <div class="mini" id="mini" aria-hidden="true"><span id="mname2"></span><small id="mcount"></small></div>
-<div class="toast" id="toast" role="status" aria-live="polite"><span id="tmsg"></span><button id="tact" type="button"></button><button id="tx" class="tx" type="button" data-i18n-label="close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><span class="twing l" aria-hidden="true"></span><span class="tem" aria-hidden="true"><svg viewBox="0 0 48 48"><g class="tr"><circle cx="24" cy="24" r="22" pathLength="1"/><circle cx="24" cy="24" r="15" pathLength="1"/><line x1="24" y1="0" x2="24" y2="48" pathLength="1"/><line x1="0" y1="24" x2="48" y2="24" pathLength="1"/></g><g class="tk"><rect x="17" y="17" width="14" height="14"/><rect x="17" y="17" width="14" height="14" transform="rotate(45 24 24)"/><circle cx="24" cy="24" r="3"/></g></svg></span><span class="ttx"><small id="tkick"></small><span id="tmsg"></span></span><button id="tact" type="button"></button><button id="tx" class="tx" type="button" data-i18n-label="close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="twing r" aria-hidden="true"></span></div>
 
 <script type="module" src="js/app.js"></script>
 </body>

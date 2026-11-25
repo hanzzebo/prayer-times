@@ -3,6 +3,9 @@
 // A new version takes over straight away and is used the next time the app is opened.
 const VERSION = '__BUILD__';
 const SHELL = `shell-${VERSION}`;
+// Unstamped (local run): network first, or a normal reload mixes old cached files with new ones.
+const DEV = VERSION.startsWith('__');
+const fresh = (req, key = req) => fetch(req).catch(() => caches.match(key, { cacheName: SHELL }));
 const DATA = 'data-v1';
 const PAGES = 'pages-v1';
 
@@ -15,6 +18,8 @@ const SHELL_FILES = [
   'js/i18n.js',
   'js/times.js',
   'data/cities.json',
+  'icons/favicon.svg',
+  'assets/senja/indonesia.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',
@@ -44,7 +49,7 @@ self.addEventListener('fetch', (e) => {
     const rel = url.pathname.slice(new URL(self.registration.scope).pathname.length);
     // Home: cached shell first so a slow network can't leave a blank screen; updates come with a new VERSION.
     if (rel === '' || rel === 'index.html') {
-      e.respondWith(caches.match('index.html', { cacheName: SHELL }).then((hit) => hit || fetch(req)));
+      e.respondWith(DEV ? fresh(req, 'index.html') : caches.match('index.html', { cacheName: SHELL }).then((hit) => hit || fetch(req)));
     } else {
       e.respondWith(cityPage(req, rel));
     }
@@ -67,7 +72,7 @@ self.addEventListener('fetch', (e) => {
   }
 
   // App files: cache first.
-  e.respondWith(caches.match(req, { cacheName: SHELL }).then((hit) => hit || fetch(req)));
+  e.respondWith(DEV ? fresh(req) : caches.match(req, { cacheName: SHELL }).then((hit) => hit || fetch(req)));
 });
 
 // City pages (jadwal-sholat/<slug>/ and the English ones) carry this month's table, so the network comes first.

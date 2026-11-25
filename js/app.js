@@ -82,8 +82,11 @@ function initialCity() {
 /* ---------- toast ---------- */
 let toastTimer, toastFn, toastWait = 0;
 const toastEl = $('#toast');
-function toast(msg, action) {
+// kick: the small gold label above the message, as on an achievement banner
+function toast(msg, action, kick = '') {
   $('#tmsg').textContent = msg;
+  $('#tkick').textContent = kick;
+  toastEl.classList.remove('show'); void toastEl.offsetWidth; // replay the opening when a toast replaces another
   toastFn = action && action.fn;
   $('#tact').textContent = action ? action.label : '';
   $('#tact').style.display = action ? '' : 'none';
@@ -157,15 +160,23 @@ async function loadToday() {
 let artName = '', artTimer;
 function setArt(name, animate) {
   if (name === artName) return;
+  const first = !artName;
   artName = name;
-  const hero = $('#sky'), paint = $('#paint'), lines = $('#lines');
+  // text over the painting follows the sky, not the app theme: only the Isha painting is dark
+  $('#sky').dataset.sky = name === 'isha' ? 'dark' : 'light';
+  const art = $('#sky .art'), old = $('#paint0'), paint = $('#paint'), lines = $('#lines');
   clearTimeout(artTimer);
-  paint.classList.remove('show');
+  // the outgoing painting stays underneath while the new outline wipes in over it
+  if (!first) { old.src = paint.src; old.classList.add('in'); }
+  paint.classList.remove('in');
   lines.src = `assets/senja/${name}-lines.webp`;
   paint.src = `assets/senja/${name}.webp`;
-  lines.classList.add('show');
-  if (animate && !RM) { hero.classList.remove('drawing'); void hero.offsetWidth; hero.classList.add('drawing'); }
-  artTimer = setTimeout(() => paint.classList.add('show'), animate && !RM ? 1900 : 0);
+  if (RM || !animate) { paint.classList.add('in'); old.classList.remove('in'); return; }
+  art.classList.remove('drawing'); void art.offsetWidth; art.classList.add('drawing');
+  artTimer = setTimeout(() => {
+    paint.classList.add('in');
+    artTimer = setTimeout(() => { old.classList.remove('in'); art.classList.remove('drawing'); }, 2200);
+  }, 1500);
 }
 
 /* "1 hr 2 min" style, rounded up so it never reads 0 min before the time */
@@ -175,6 +186,7 @@ function human(s) {
 }
 
 let lastMin = -1;
+const BASE_TITLE = document.title;
 function tick(force) {
   if (!city) return;
   const z = zoned(city.z);
@@ -191,13 +203,14 @@ function tick(force) {
     $('#htime').textContent = n.tomorrow ? (state.tmrw ? state.tmrw[1] : '--:--') : T[n.i];
     $('#htmrw').textContent = n.tomorrow ? t('tomorrow') : '';
     $('#mname2').textContent = `${pname(n.i)} ${$('#htime').textContent}`;
-    setArt(PREVIEW && Object.values(ART).includes(PREVIEW) ? PREVIEW : ART[n.i], changed);
+    setArt(PREVIEW && Object.values(ART).includes(PREVIEW) ? PREVIEW : ART[n.i], changed || !artName); // also draws in when the app opens
     if (changed) { restart($('.plate'), 'swap'); buzz(10); }
     if (state.selOffset === 0) drawList();
+    drawFive();
     lastMin = -1;
   }
 
-  if (n.target == null) { $('#hcount').textContent = ''; $('#ringmin').textContent = ''; return; }
+  if (n.target == null) { $('#hcount').textContent = ''; $('#ringmin').textContent = ''; document.title = BASE_TITLE; return; }
   const left = Math.max(0, n.target - s), min = Math.ceil(left / 60);
   const k = Math.min(1, Math.max(0, (s - n.prev) / (n.target - n.prev)));
   $('#sky').classList.toggle('is-soon', left <= 1800);
@@ -207,6 +220,7 @@ function tick(force) {
   lastMin = min;
   $('#hcount').textContent = human(left);
   $('#mcount').textContent = `${t('in')} ${human(left)}`;
+  document.title = `${pname(n.i)} ${t('in')} ${human(left)} · ${BASE_TITLE}`;
   $('#ringmin').textContent = min >= 60 ? Math.floor(min / 60) + 'h' : min + 'm';
   $('#ringarc').setAttribute('stroke-dasharray', `${(k * 100).toFixed(1)} 100`);
   drawSun(s);
@@ -228,8 +242,62 @@ function renderStatic() {
   if (state.status !== 'ok') {
     $('#hname').textContent = '—'; $('#har').textContent = ''; $('#htime').textContent = '--:--'; $('#htmrw').textContent = ''; $('#hcount').textContent = '';
   }
-  drawWeek(); drawList(); drawSun(); drawQibla();
+  $('#hdate').textContent = [$('#today').textContent, hijri].filter(Boolean).join(' · ') + ', ' + city.n;
+  drawList(); drawSun(); drawQibla(); drawFive(); drawTable();
 }
+
+/* desktop: the five paintings in a row; hover or focus shows each one as its line drawing */
+function drawFive() {
+  const T = state.times;
+  $$('.five .th').forEach((el) => {
+    const k = +el.dataset.k, li = el.parentNode;
+    el.setAttribute('aria-label', t('five.show', { n: pname(k) }));
+    li.querySelector('.thn').textContent = pname(k);
+    li.querySelector('.tht').textContent = T ? T[k] : '';
+    li.classList.toggle('next', !state.nextTomorrow && state.next === k);
+  });
+}
+
+/* desktop: the whole month as a table; the arrows move a month and rows slide in from that side */
+let tView = null;
+async function drawTable(dir) {
+  if (!city || !state.today) return;
+  if (!tView || !dir) tView = { y: state.today.y, m: state.today.m };
+  const { y, m } = tView, c0 = city, box = $('#tbody');
+  const title = dateFmt({ month: 'long', year: 'numeric' }).format(new Date(Date.UTC(y, m - 1, 15)));
+  $('#mtitle').textContent = title;
+  const data = await loadYear(c0.id, y);
+  if (city !== c0 || tView.y !== y || tView.m !== m) return;
+  if (!data) { box.innerHTML = `<p class="state">${data === undefined ? t('offlinenodata') : t('nodata', { y })}</p>`; return; }
+  const n = new Date(Date.UTC(y, m, 0)).getUTCDate(), td = state.today, wd = dateFmt({ weekday: 'short' });
+  const slide = dir ? (dir > 0 ? 'row-r' : 'row-l') : '';
+  // this month: days more than 3 before today fold away behind a "show earlier days" row
+  const here = y === td.y && m === td.m, cut = here ? td.d - 3 : 0, folded = Math.max(0, cut - 1);
+  const rows = Array.from({ length: n }, (_, i) => {
+    const d = i + 1, T = data.days[doy(y, m, d)] || [], when = (y * 13 + m) * 32 + d - ((td.y * 13 + td.m) * 32 + td.d);
+    const cls = [slide, when === 0 ? 'today' : when < 0 ? 'past' : '', d < cut ? 'old' : ''].filter(Boolean).join(' ');
+    return `<tr class="${cls}" style="animation-delay:${Math.max(0, i - folded) * 18}ms"><th scope="row">${wd.format(utcNoon({ y, m, d })).replace('.', '')} ${d}</th>${KEYS.map((_, j) => `<td>${T[j] || '--:--'}</td>`).join('')}</tr>`;
+  }).join('');
+  const more = folded ? `<tr class="more"><td colspan="8"><button type="button" aria-expanded="false" data-n="${folded}">${t('table.more', { n: folded })}</button></td></tr>` : '';
+  box.innerHTML = `<table><caption class="sr">${t('table.cap', { m: title, c: city.n, z: city.z })}</caption><thead><tr><th scope="col">${t('table.date')}</th>${KEYS.map((_, j) => `<th scope="col">${pname(j)}</th>`).join('')}</tr></thead><tbody>${more}${rows}</tbody></table>`;
+  stickTops();
+}
+$('#tbody').addEventListener('click', (e) => {
+  const b = e.target.closest('.more button'); if (!b) return;
+  const open = b.getAttribute('aria-expanded') !== 'true', tb = b.closest('table');
+  tb.classList.toggle('open', open);
+  b.setAttribute('aria-expanded', open);
+  b.textContent = t(open ? 'table.less' : 'table.more', { n: b.dataset.n });
+  buzz(5);
+});
+/* desktop: the month title and the column heads stay pinned under the top bar while the table scrolls */
+function stickTops() {
+  const r = document.documentElement.style, rail = $('.rail'), head = $('.mthead');
+  r.setProperty('--railh', (DESK.matches ? rail.offsetHeight : 0) + 'px');
+  r.setProperty('--mthh', head.offsetHeight + 'px');
+}
+$('#tprev').onclick = () => { tView.m--; if (tView.m < 1) { tView.m = 12; tView.y--; } drawTable(-1); };
+$('#tnext').onclick = () => { tView.m++; if (tView.m > 12) { tView.m = 1; tView.y++; } drawTable(1); };
 
 /* imsak and sunrise are not prayers: one line under the date. The five prayers are numbered steps */
 const extraLine = (T) => (T ? `${t('pr.imsak')} ${T[0]} · ${t('pr.terbit')} ${T[2]}` : '');
@@ -241,8 +309,14 @@ const stepsHtml = (T, { now = null, nxt = -1 } = {}) => PRAYER_IDX.map((k, i) =>
 }).join('');
 
 async function drawList() {
-  const box = $('#list');
-  if (state.status === 'loading') { box.innerHTML = `<li class="state">${t('loading')}</li>`; $('#extra').textContent = ''; return; }
+  const box = $('#list'), loading = state.status === 'loading';
+  $('#sky').classList.toggle('loading', loading);
+  if (loading) {
+    // the page being drafted: numbered rings and dotted guide lines where the prayers will be
+    $('#hname').textContent = t('loading');
+    box.innerHTML = [42, 46, 38, 58, 44].map((w, i) => `<li class="pr guide" aria-hidden="true"><span class="num">0${i + 1}</span><i class="rule" style="width:${w}%"></i><i class="rule"></i></li>`).join('');
+    $('#extra').textContent = ''; return;
+  }
   const off = state.selOffset, isToday = off === 0;
   let T = state.times;
   if (!isToday) {
@@ -259,47 +333,56 @@ async function drawList() {
   tick();
 }
 
-/* week strip around today (in the city's zone) */
-function drawWeek() {
-  const td = state.today, wd = dateFmt({ weekday: 'short' }), full = dateFmt({ weekday: 'long', day: 'numeric', month: 'long' });
-  $('#week').innerHTML = [-3, -2, -1, 0, 1, 2, 3].map((o) => {
-    const d = shift(td.y, td.m, td.d, o), dt = utcNoon(d);
-    return `<button class="wd" data-o="${o}" aria-pressed="${o === state.selOffset}" aria-label="${full.format(dt)}"><span>${wd.format(dt).replace('.', '')}</span><b>${d.d}</b></button>`;
-  }).join('');
-}
-$('#week').addEventListener('click', (e) => {
-  const b = e.target.closest('.wd');
-  if (!b || b.getAttribute('aria-pressed') === 'true') return;
-  state.selOffset = +b.dataset.o;
-  $$('.wd').forEach((x) => x.setAttribute('aria-pressed', x === b));
-  buzz(6); drawList();
-});
-
 /* ---------- the sun today: arc from sunrise to sunset, prayer marks on the horizon ---------- */
-// drawn at the chart's real width so labels keep their size; Asr and Isha sit on a second row so names never collide
-const HZ = 150, PEAK = -110, LOW = new Set([4, 6]);
+// as in the design: the x axis runs 04:00 to 20:00 across 1000 units; the arc runs sunrise to sunset, peak y 30, horizon y 170
+const HALF_SUN = (fill) => `<svg aria-hidden="true" viewBox="0 0 64 64"><path class="gd" d="M8 32 A24 24 0 0 1 56 32"/><path class="g" d="M16 32 A16 16 0 0 1 48 32"/><path d="M22 32 A10 10 0 0 1 42 32 Z" fill="${fill}"/><line class="r" x1="32" y1="2" x2="32" y2="8"/></svg>`;
+const RAYS = Array.from({ length: 12 }, (_, i) => { const a = (i * Math.PI) / 6, c = Math.cos(a), s = Math.sin(a); return `<line x1="${(36 + 28 * c).toFixed(1)}" y1="${(36 + 28 * s).toFixed(1)}" x2="${(36 + 32 * c).toFixed(1)}" y2="${(36 + 32 * s).toFixed(1)}"/>`; }).join('');
+const FULL_SUN = `<svg aria-hidden="true" viewBox="0 0 72 72"><circle class="gd" cx="36" cy="36" r="34"/><circle class="g" cx="36" cy="36" r="24"/><g class="r">${RAYS}</g><circle class="disc" cx="36" cy="36" r="17"/></svg>`;
+const SHIFT = { 1: '-20%', 5: '-78%', 6: '-22%' };
+const MOON = `<svg aria-hidden="true" viewBox="0 0 72 72"><circle class="gd" cx="36" cy="36" r="34"/><circle class="g" cx="36" cy="36" r="24"/><g class="r">${RAYS}</g><circle class="mdisc" cx="36" cy="36" r="17"/><circle class="mcut" cx="43" cy="31" r="15"/></svg>`;
+/* the night chart board: x runs 18:00 to 05:00 (660 min) over 1000 units; the arc spans Maghrib to Fajr */
+function drawNight(box, s, mg, is, fj) {
+  const xOf = (v) => ((v / 60 - 1080) / 660) * 1000, x0 = xOf(mg), x1 = xOf(fj), mid = (x0 + x1) / 2;
+  const arc = (x) => { const u = Math.min(1, Math.max(0, (x - x0) / (x1 - x0))); return { u, y: 170 - 4 * u * (1 - u) * 140 }; };
+  const len = fj - mg, half = mg + len / 2, third = mg + (len * 2) / 3;
+  const nowX = Math.min(x1, Math.max(x0, xOf(s))), { u } = arc(nowX);
+  const done = `<path class="arcdone" d="M${x0.toFixed(1)} 170 Q${(x0 + u * (mid - x0)).toFixed(1)} ${(170 + u * -280).toFixed(1)} ${nowX.toFixed(1)} ${arc(nowX).y.toFixed(1)}"/>`;
+  const ticks = [is, half, third].map((v) => { const x = xOf(v); return `<line class="tk" x1="${x.toFixed(1)}" y1="${arc(x).y.toFixed(1)}" x2="${x.toFixed(1)}" y2="170"/>`; }).join('');
+  const hm = (v) => { const m = Math.round(v / 60) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+  const pts = [['m1', pname(5), mg, ''], ['m2', pname(6), is, ''], ['m3', t('night.mid'), half, ''], ['m4', t('night.third'), third, 'gold'], ['m5', pname(1), fj, 'next']];
+  const marks = pts.map(([c, n, v, k], i) => `<div class="mark ${c} ${k}" style="left:${(xOf(v) / 10).toFixed(2)}%;transform:translateX(${i === 0 ? '-20%' : i === 4 ? '-70%' : '-50%'})"><span>${n.toUpperCase()}</span><b>${hm(v)}</b></div>`).join('');
+  box.innerHTML = `<svg aria-hidden="true" viewBox="0 0 1000 200" preserveAspectRatio="none"><path class="arcbg" d="M${x0.toFixed(1)} 170 Q${mid.toFixed(1)} -110 ${x1.toFixed(1)} 170"/>${done}<line class="hz" x1="0" y1="170" x2="1000" y2="170"/>${ticks}</svg>`
+    + `<span class="ico now moon" style="left:${(nowX / 10).toFixed(2)}%;top:${(arc(nowX).y - 36).toFixed(0)}px;width:72px;height:72px">${MOON}</span>` + marks;
+  box.setAttribute('aria-label', t('aria.night', { m: hm(mg), i: hm(is), h: hm(half), l: hm(third), f: hm(fj) }));
+}
 function drawSun(now) {
-  const T = state.times, svg = $('#sunchart');
-  if (!T) { svg.innerHTML = ''; return; }
-  const W = Math.round(svg.clientWidth) || 600, SX0 = W * 0.14, SX1 = W * 0.86, MID = (SX0 + SX1) / 2;
+  const T = state.times, box = $('#sunchart');
+  if (!T) { box.innerHTML = ''; return; }
   const s = now ?? zoned(city.z).s, rise = sec(T[2]), set = sec(T[5]);
-  const xAt = (v) => SX0 + ((v - rise) / (set - rise)) * (SX1 - SX0);
-  const pt = (k) => { const u = 1 - k; return [u * u * SX0 + 2 * u * k * MID + k * k * SX1, u * u * HZ + 2 * u * k * PEAK + k * k * HZ]; };
-  const k = Math.min(1, Math.max(0, (s - rise) / (set - rise))), up = s > rise && s < set, [sx, sy] = pt(k);
-  const qx = SX0 + k * (MID - SX0), qy = HZ + k * (PEAK - HZ);
-  const marks = PRAYER_IDX.map((i) => {
-    const x = Math.min(W - 1, Math.max(1, xAt(sec(T[i])))), dy = LOW.has(i) ? 42 : 0;
-    const anchor = x < 40 ? 'start' : x > W - 40 ? 'end' : 'middle', tx = anchor === 'start' ? 0 : anchor === 'end' ? W : x;
-    return `<line class="mk" x1="${x.toFixed(1)}" y1="${HZ - 6}" x2="${x.toFixed(1)}" y2="${HZ + 6 + dy}"/>`
-      + `<text x="${tx.toFixed(1)}" y="${HZ + 22 + dy}" text-anchor="${anchor}">${pname(i).toUpperCase()}</text><text class="t" x="${tx.toFixed(1)}" y="${HZ + 40 + dy}" text-anchor="${anchor}">${T[i]}</text>`;
-  }).join('');
-  svg.setAttribute('viewBox', `0 0 ${W} ${HZ + 90}`);
-  svg.innerHTML = `<line class="hz" x1="0" y1="${HZ}" x2="${W}" y2="${HZ}"/>`
-    + `<path class="arcbg" d="M${SX0} ${HZ} Q${MID} ${PEAK} ${SX1} ${HZ}"/>`
-    + (up || s >= set ? `<path class="arcdone" d="M${SX0} ${HZ} Q${qx.toFixed(1)} ${qy.toFixed(1)} ${sx.toFixed(1)} ${sy.toFixed(1)}"/>` : '')
-    + (up ? `<circle class="gc" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="18"/><circle class="gc" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="28"/><circle class="disc" cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="10"/>` : '')
-    + marks;
-  svg.setAttribute('aria-label', t('aria.sun', { r: T[2], s: T[5] }));
+  // after Maghrib, and before Fajr, the chart becomes the night: Maghrib to the next Fajr
+  const late = s >= set && state.tmrw, early = s < sec(T[1]) && state.yday, night = !!(late || early);
+  $('#sunbox').classList.toggle('night', night);
+  $('#sunh').textContent = t(night ? 'night.title' : 'sun.title');
+  if (late) drawNight(box, s, set, sec(T[6]), sec(state.tmrw[1]) + 86400);
+  else if (early) drawNight(box, s + 86400, sec(state.yday[5]), sec(state.yday[6]), sec(T[1]) + 86400);
+  if (night) { drawFacts(T, s, rise, set); return; }
+  const xOf = (v) => ((v / 60 - 240) / 960) * 1000, x0 = xOf(rise), x1 = xOf(set), mid = (x0 + x1) / 2;
+  const arc = (x) => { const u = Math.min(1, Math.max(0, (x - x0) / (x1 - x0))); return { u, y: 170 - 4 * u * (1 - u) * 140 }; };
+  const up = s > rise && s < set, nowX = Math.min(x1, Math.max(x0, xOf(s))), { u } = arc(nowX);
+  // the part of the arc the sun has already travelled (the quadratic split at u)
+  const qx = x0 + u * (mid - x0), qy = 170 + u * (-110 - 170);
+  const done = s > rise ? `<path class="arcdone" d="M${x0.toFixed(1)} 170 Q${qx.toFixed(1)} ${qy.toFixed(1)} ${nowX.toFixed(1)} ${arc(nowX).y.toFixed(1)}"/>` : '';
+  const ticks = [3, 4].map((i) => { const x = xOf(sec(T[i])); return `<line class="tk" x1="${x.toFixed(1)}" y1="${arc(x).y.toFixed(1)}" x2="${x.toFixed(1)}" y2="170"/>`; }).join('');
+  const icon = (x, y, size, svg, cls = '') => `<span class="ico ${cls}" style="left:${(x / 10).toFixed(2)}%;top:${(y - size / 2).toFixed(0)}px;width:${size}px;height:${size}px">${svg}</span>`;
+  const nxt = state.nextTomorrow ? -1 : state.next;
+  const marks = PRAYER_IDX.map((i) => `<div class="mark m${i}${i === nxt ? ' next' : ''}" style="left:${(xOf(sec(T[i])) / 10).toFixed(2)}%;transform:translateX(${SHIFT[i] || '-50%'})"><span>${pname(i).toUpperCase()}</span><b>${T[i]}</b></div>`).join('');
+  box.innerHTML = `<svg aria-hidden="true" viewBox="0 0 1000 200" preserveAspectRatio="none"><path class="arcbg" d="M${x0.toFixed(1)} 170 Q${mid.toFixed(1)} -110 ${x1.toFixed(1)} 170"/>${done}<line class="hz" x1="0" y1="170" x2="1000" y2="170"/>${ticks}</svg>`
+    + icon(x0, 170, 56, HALF_SUN('var(--gold)')) + icon(x1, 170, 56, HALF_SUN('var(--persimmon)'))
+    + (up ? icon(nowX, arc(nowX).y, 72, FULL_SUN, 'now') : '') + marks;
+  box.setAttribute('aria-label', t('aria.sun', { r: T[2], s: T[5] }));
+  drawFacts(T, s, rise, set);
+}
+function drawFacts(T, s, rise, set) {
   const day = set - rise;
   $('#daylen').textContent = t('dur.hm', { h: Math.floor(day / 3600), m: Math.round((day % 3600) / 60) });
   $('#dayspan').textContent = t('sun.span', { r: T[2], s: T[5] });
@@ -336,13 +419,72 @@ function drawCities() {
     .sort((a, b) => a.p.localeCompare(b.p, 'id') || a.n.localeCompare(b.n, 'id'));
   $('#zones').classList.toggle('dim', !!q); // search covers every zone
   $('#count').textContent = q ? t(list.length === 1 ? 'city.result1' : 'city.results', { n: list.length }) : t('city.count', { n: list.length, z: zoneFilter });
-  let html = '', prov = '', i = 0;
-  for (const c of list) {
-    if (c.p !== prov) { prov = c.p; html += `<div class="grp">${esc(prov)}${q ? ' · ' + c.z : ''}</div>`; }
-    const me = c.id === city.id;
-    html += `<button class="city" style="--i:${Math.min(i++, 12)}" aria-current="${me}" data-id="${c.id}"><span>${esc(c.n)}</span><small>${me ? t('city.active') : ''}</small></button>`;
+  // one block per province (not newspaper columns) so headings can stick and the province nav can jump
+  const provs = [...new Set(list.map((c) => c.p))];
+  let i = 0;
+  const html = provs.map((p, k) => `<section class="pgrp" id="pv${k}" aria-labelledby="pvh${k}"><h2 class="grp" id="pvh${k}">${esc(p)}</h2><div class="pcities">`
+    + list.filter((c) => c.p === p).map((c) => {
+      const me = c.id === city.id;
+      // searching covers every zone, so each result names its own
+      return `<button class="city" style="--i:${Math.min(i++, 12)}" aria-current="${me}" data-id="${c.id}"><span>${esc(c.n)}</span><small>${me ? t('city.active') : q ? c.z : ''}</small></button>`;
+    }).join('') + '</div></section>').join('');
+  $('#provs').innerHTML = provs.map((p, k) => `<button type="button" data-k="${k}"><i aria-hidden="true"></i><span>${esc(p)}</span><small>${list.filter((c) => c.p === p).length}</small></button>`).join('');
+  spyLock = -1; // a new list: the old tapped stop means nothing
+  if (list.length) { $('#cities').innerHTML = html; spyProv(true); return; }
+  // no match: the archipelago map searching city to city, then the closest name as one tap
+  const near = closest(q), map = $('#cities .nm-map');
+  $('#cities').innerHTML = `<div class="nomatch"><div class="nm-band" aria-hidden="true"></div>`
+    + `<p class="empty" role="status">${t('city.empty', { q: esc(raw) })}</p>${near ? `<button class="chip city" data-id="${near.id}">${esc(near.n)}</button>` : ''}</div>`;
+  // keep the drawn map while typing so its animation doesn't restart on every letter
+  if (map) { $('#cities .nm-band').append(map); markNear(map, near); } else drawMap($('#cities .nm-band'), near);
+}
+function markNear(map, near) {
+  const hit = map.querySelector('.nm-hit'), ret = map.querySelector('.nm-ret');
+  hit.style.display = near ? '' : 'none';
+  if (!near) return;
+  const [x, y] = mapXY(near);
+  hit.setAttribute('cx', x); hit.setAttribute('cy', y);
+  ret.style.setProperty('--rx', `${x}px`); ret.style.setProperty('--ry', `${y}px`);
+}
+/* the outline is a static file (cached by the service worker); dots and the target come from CITIES */
+let MAP = null;
+const HOPS = ['0119', '2013', '2622', '3110', '3329']; // Banda Aceh, Pontianak, Makassar, Ambon, Jayapura: west to east
+const mapXY = (c) => [+((c.lon - 94.5) * 20).toFixed(1), +((7.5 - c.lat) * 20).toFixed(1)]; // same projection as indonesia.svg
+async function drawMap(band, near) {
+  MAP ??= fetch('assets/senja/indonesia.svg').then((r) => (r.ok ? r.text() : Promise.reject())).catch(() => (MAP = null, ''));
+  const svg = await MAP;
+  if (!svg || !band.isConnected) return;
+  const stops = HOPS.map((id) => CITIES.find((c) => c.id === id)).filter(Boolean);
+  const rest = mapXY(stops[2] || CITIES[0]); // where the target sits when motion is reduced; markNear moves it to the suggestion
+  const dots = CITIES.map((c) => { const [x, y] = mapXY(c); return `<circle cx="${x}" cy="${y}" r="2"/>`; }).join('');
+  const hit = '<circle class="nm-hit" r="7"/>';
+  const labs = stops.map((c, i) => {
+    const [x, y] = mapXY(c), end = x > 800;
+    return `<text class="nm-lab" x="${end ? x - 14 : x + 14}" y="${y - 12}" text-anchor="${end ? 'end' : 'start'}" style="animation-delay:${2 + i * 3}s">${esc(c.n.replace(/^Kota\s+/, '').toUpperCase())}</text>`;
+  }).join('');
+  const vars = stops.map((c, i) => { const [x, y] = mapXY(c); return `--x${i}:${x}px;--y${i}:${y}px`; }).join(';');
+  const ret = `<g class="nm-ret" style="${vars};--rx:${rest[0]}px;--ry:${rest[1]}px"><line x1="-5000" y1="0" x2="5000" y2="0"/><line x1="0" y1="-5000" x2="0" y2="5000"/><circle r="14"/><circle r="30" stroke-opacity=".6"/><circle r="52" stroke-opacity=".3"/><circle class="ping" r="14"/><circle class="pt" r="3.5"/></g>`;
+  band.innerHTML = svg.replace('</svg>', `<g class="nm-dots">${dots}</g>${hit}${ret}${labs}</svg>`);
+  markNear(band.querySelector('.nm-map'), near);
+}
+/* the city whose short name is fewest edits from the query ("makasar" → Kota Makassar) */
+function closest(q) {
+  if (q.length < 3) return null;
+  const dist = (a, b) => {
+    let row = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const next = [i];
+      for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j] + 1, next[j - 1] + 1, row[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      row = next;
+    }
+    return row[b.length];
+  };
+  let best = null, bd = Infinity;
+  for (const c of CITIES) {
+    const d = dist(q, norm(c.n.replace(/^(Kota|Kab\.)\s+/, '')));
+    if (d < bd || (d === bd && /^Kota/.test(c.n))) { bd = d; best = c; }
   }
-  $('#cities').innerHTML = list.length ? html : `<p class="empty">${t('city.empty', { q: esc(raw) })}</p>`;
+  return bd <= Math.max(2, Math.floor(q.length / 3)) ? best : null;
 }
 function setZone(z) { zoneFilter = z; $$('#zones button').forEach((x) => x.setAttribute('aria-pressed', x.dataset.z === z)); }
 function renderLoc(animate) {
@@ -352,7 +494,6 @@ function renderLoc(animate) {
   $('#locbtn').setAttribute('aria-label', t('aria.loc', { c: shortName(city.n), z: city.z }));
   $('#mloc').textContent = `${city.n} · ${city.z}`;
   $('#curcity').textContent = t('city.current', { c: city.n, p: city.p, z: city.z });
-  $('#notice').hidden = !estimated;
   // the city page's own text only fits while its city and language are shown
   const seo = $('#seo');
   if (seo) seo.hidden = city.id !== PAGE_CITY || LANG !== PAGE_LANG;
@@ -371,12 +512,41 @@ function pickCity(c) {
   const prev = { c: city, est: estimated };
   setTimeout(() => {
     applyCity(c); go('home'); restart($('#locbtn'), 'pulse');
-    toast(t('t.city', { c: shortName(c.n) }), { label: t('undo'), fn: () => { applyCity(prev.c, { save: !prev.est }); estimated = prev.est; renderLoc(true); if (!prev.est) store.set('city', prev.c.id); } });
+    toast(c.n, { label: t('undo'), fn: () => { applyCity(prev.c, { save: !prev.est }); estimated = prev.est; renderLoc(true); if (!prev.est) store.set('city', prev.c.id); } }, t('k.city'));
   }, RM ? 0 : 380);
 }
 $('#q').addEventListener('input', drawCities);
 $('#qclear').addEventListener('click', () => { $('#q').value = ''; drawCities(); $('#q').focus(); });
-$('#zones').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; setZone(b.dataset.z); $('#q').value = ''; drawCities(); $('#cities').scrollTop = 0; buzz(6); });
+$('#zones').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; setZone(b.dataset.z); $('#q').value = ''; drawCities(); if ($('#cities').getBoundingClientRect().top < pinOffset()) jumpTo($('#cities')); buzz(6); });
+/* the pinned bar (phone, tablet) or the desktop top rail covers this much of the viewport */
+const pinOffset = () => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--railh')) || 0) + (DESK.matches ? 0 : $('#cpin').offsetHeight);
+function jumpTo(el) { window.scrollTo({ top: scrollY + el.getBoundingClientRect().top - pinOffset(), behavior: RM ? 'auto' : 'smooth' }); }
+/* a tapped stop stays chosen until the user scrolls themselves: the last provinces can't reach the top
+   of the page, and the smooth scroll would otherwise light up every stop it passes */
+let spyLock = -1;
+$('#provs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; spyLock = +b.dataset.k; spyProv(true); jumpTo($('#pv' + b.dataset.k)); buzz(6); });
+['wheel', 'touchstart', 'keydown'].forEach((ev) => addEventListener(ev, (e) => { if (!e.target.closest?.('#provs')) spyLock = -1; }, { passive: true }));
+/* highlight the province under the pinned bar, and keep its pill in view on the sideways strip */
+let spyK = -1;
+function spyProv(reset) {
+  if (reset) spyK = -1;
+  if (!$('#city').classList.contains('on')) return;
+  const off = pinOffset() + 60, secs = $$('#cities .pgrp');
+  let k = 0;
+  if (spyLock >= 0 && spyLock < secs.length) k = spyLock;
+  else secs.forEach((el, j) => { if (el.getBoundingClientRect().top <= off) k = j; });
+  if (k === spyK || !secs.length) return;
+  spyK = k;
+  const nav = $('#provs');
+  // a route: stops behind you are filled, the one you're in is the diamond, the rest wait ahead
+  $$('#provs button').forEach((b) => { const j = +b.dataset.k; b.setAttribute('aria-current', j === k); b.classList.toggle('done', j < k); });
+  const b = nav.children[k];
+  if (b && nav.scrollWidth > nav.clientWidth) nav.scrollTo({ left: b.offsetLeft - 16, behavior: RM ? 'auto' : 'smooth' });
+}
+let spyRaf = 0;
+addEventListener('scroll', () => { if (!spyRaf) spyRaf = requestAnimationFrame(() => { spyRaf = 0; spyProv(); }); }, { passive: true });
+const pinRO = new ResizeObserver(() => { const r = document.documentElement.style; r.setProperty('--pinh', $('#cpin').offsetHeight + 'px'); r.setProperty('--sideh', $('.cside').offsetHeight + 'px'); });
+pinRO.observe($('#cpin')); pinRO.observe($('.cside'));
 $('#cities').addEventListener('click', (e) => {
   const b = e.target.closest('.city'); if (!b) return;
   const s = b.querySelector('small'); if (s) s.outerHTML = CHK;
@@ -399,9 +569,11 @@ function gpsMsg(text) { const m = $('#gpsmsg'); m.textContent = text || t('gps.n
 $('#gps').addEventListener('click', () => {
   if (gpsBusy) return;
   const g = $('#gps'), icon = g.querySelector('svg');
-  const done = (msg) => {
+  // after a failure the button says what to do next: "Try again" (persimmon), or plain outline when access is off
+  const done = (msg, mode = '') => {
     gpsBusy = false; g.removeAttribute('aria-busy'); const sp = g.querySelector('.spin'); if (sp) sp.remove();
-    icon.style.display = ''; $('#gpslabel').textContent = t('gps.btn'); gpsMsg(msg);
+    g.dataset.state = mode;
+    icon.style.display = ''; $('#gpslabel').textContent = t(mode === 'retry' ? 'gps.retry' : 'gps.btn'); gpsMsg(msg);
   };
   if (!('geolocation' in navigator)) return done(t('gps.unavail'));
   gpsBusy = true; g.setAttribute('aria-busy', 'true'); icon.style.display = 'none';
@@ -411,7 +583,7 @@ $('#gps').addEventListener('click', () => {
     const c = nearest(pos.coords.latitude, pos.coords.longitude);
     if (!c) return done(t('gps.unavail'));
     done(t('gps.found', { c: shortName(c.n) })); buzz(10); pickCity(c);
-  }, (err) => done(t(err.code === 1 ? 'gps.denied' : err.code === 3 ? 'gps.timeout' : 'gps.unavail')),
+  }, (err) => done(t(err.code === 1 ? 'gps.denied' : err.code === 3 ? 'gps.timeout' : 'gps.unavail'), err.code === 1 ? 'off' : 'retry'),
   { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
 });
 
@@ -434,20 +606,55 @@ async function drawMonth(dir) {
   grid.innerHTML = Array.from({ length: 7 }, (_, i) => `<span class="wd" aria-hidden="true">${wd.format(utcNoon({ y: 2024, m: 1, d: i + 1 })).replace('.', '')}</span>`).join('')
     + '<span></span>'.repeat(lead)
     + Array.from({ length: n }, (_, i) => {
-      const d = i + 1, cls = here && d === z.d ? 'today' : here && d < z.d || y * 12 + m < z.y * 12 + z.m ? 'past' : '';
-      return `<button type="button" class="cday ${cls}" style="animation-delay:${i * 8}ms" data-d="${d}" aria-pressed="${d === mView.d}" aria-label="${full.format(utcNoon({ y, m, d }))}">${d}</button>`;
+      const d = i + 1, h = hijriDay({ y, m, d }), bidh = h >= 13 && h <= 15;
+      const cls = [here && d === z.d ? 'today' : here && d < z.d || y * 12 + m < z.y * 12 + z.m ? 'past' : '', bidh ? 'bidh' : ''].join(' ');
+      return `<button type="button" class="cday ${cls}" style="animation-delay:${i * 8}ms" data-d="${d}" aria-pressed="${d === mView.d}" aria-label="${full.format(utcNoon({ y, m, d }))}${bidh ? ', ' + t('bidh') : ''}">${d}<small aria-hidden="true">${h || ''}</small></button>`;
     }).join('');
-  drawDay();
+  drawDay(); drawLight(data, y, m, n, here ? z.d : 0);
+  $('#mlegend').innerHTML = `<span class="lg-b">${t('bidh.legend', { m: hijriMonth({ y, m, d: 15 }) })}</span><span class="lg-s">${t('sunnah')}</span>`;
   // the gold grid redraws, then the dates slide in from the side you moved toward
   if (dir && !RM) {
     restart($('.mcal'), 'drawing');
     grid.className = 'cgrid'; void grid.offsetWidth; grid.className = 'cgrid ' + (dir > 0 ? 'from-right' : 'from-left');
   }
 }
+/* Hijri day and month by the Umm al-Qura calendar (Kemenag's can differ by a day, as the footnote says) */
+const hijriDay = (dt) => { try { return +dateFmt({ day: 'numeric' }, 'islamic-umalqura').format(utcNoon(dt)).replace(/\D/g, ''); } catch (e) { return 0; } };
+const hijriMonth = (dt) => { try { return dateFmt({ month: 'long' }, 'islamic-umalqura').format(utcNoon(dt)); } catch (e) { return ''; } };
+
+/* month in light: one small chart per prayer, how its time drifts across the month, today marked */
+function drawLight(data, y, m, n, today) {
+  const box = $('#mlight');
+  if (!data) { box.innerHTML = ''; return; }
+  box.innerHTML = PRAYER_IDX.map((k) => {
+    const v = Array.from({ length: n }, (_, i) => { const T = data.days[doy(y, m, i + 1)]; return T ? sec(T[k]) / 60 : null; });
+    const ok = v.filter((x) => x != null);
+    if (!ok.length) return '';
+    const lo = Math.min(...ok), hi = Math.max(...ok), span = Math.max(hi - lo, 4), pad = (span - (hi - lo)) / 2;
+    const X = (i) => (n > 1 ? (i / (n - 1)) * 100 : 50), Y = (x) => 36 - ((x - lo + pad) / span) * 32;
+    const d = v.map((x, i) => (x == null ? '' : `${i && v[i - 1] != null ? 'L' : 'M'}${X(i).toFixed(2)} ${Y(x).toFixed(2)}`)).join('');
+    const grid = [7, 14, 21, 28].filter((g) => g < n).map((g) => `<line x1="${X(g - 1).toFixed(2)}" y1="0" x2="${X(g - 1).toFixed(2)}" y2="40"/>`).join('');
+    const first = ok[0], last = ok[ok.length - 1], diff = Math.round(last - first);
+    const hm = (x) => `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(Math.round(x % 60)).padStart(2, '0')}`;
+    const dot = today && v[today - 1] != null ? `<i class="ldot" style="left:${X(today - 1).toFixed(2)}%;top:${(Y(v[today - 1]) / 40 * 100).toFixed(1)}%"></i>` : '';
+    return `<li><p class="lh"><b>${pname(k)}</b><span>${hm(first)} → ${hm(last)}</span></p>`
+      + `<div class="lchart" role="img" aria-label="${pname(k)}: ${hm(first)} → ${hm(last)}"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><g class="lg">${grid}<line x1="0" y1="38" x2="100" y2="38"/></g><path class="lp" d="${d}" pathLength="1"/></svg>${dot}</div>`
+      + `<p class="ld">${diff ? t(diff > 0 ? 'light.later' : 'light.earlier', { n: Math.abs(diff) }) : t('light.same')}</p></li>`;
+  }).join('');
+  if (!RM) restart($('.mlight'), 'drawing');
+}
+
+/* five skies: the five paintings with the chosen day's times; hover or focus shows the line drawing */
+function drawSkies(T, label) {
+  $('#msh').textContent = t('skies.title', { d: label });
+  $('#mskies').innerHTML = T ? PRAYER_IDX.map((k) => `<li><div class="th" tabindex="0" data-k="${k}" aria-label="${t('five.show', { n: pname(k) })}"><img class="thp" src="assets/senja/${ART[k]}.webp" alt="" loading="lazy"><img class="thk" src="assets/senja/${ART[k]}-lines.webp" alt="" loading="lazy"></div><span class="thl">${pname(k)} <span class="tht">${T[k]}</span></span></li>`).join('') : '';
+}
+
 function drawDay() {
   const { y, m, d } = mView, box = $('#mday'), z = zoned(city.z);
-  if (!mData) { box.innerHTML = `<p class="state">${mData === undefined ? t('offlinenodata') : t('nodata', { y })}</p>`; return; }
+  if (!mData) { box.innerHTML = `<p class="state">${mData === undefined ? t('offlinenodata') : t('nodata', { y })}</p>`; drawSkies(null, ''); return; }
   const T = mData.days[doy(y, m, d)], today = z.y === y && z.m === m && z.d === d;
+  drawSkies(T, today ? t('month.today') : dateFmt({ day: 'numeric', month: 'long' }).format(utcNoon({ y, m, d })));
   box.innerHTML = `<h2>${dateFmt({ weekday: 'long', day: 'numeric', month: 'long' }).format(utcNoon({ y, m, d }))}${today ? ' · ' + t('month.today') : ''}</h2>`
     + (T ? `<p class="extra">${extraLine(T)}</p><ol class="steps">${stepsHtml(T)}</ol>` : `<p class="state">${t('nodata', { y })}</p>`)
     + `<p class="foot">${t('foot')}</p>`;
@@ -464,8 +671,17 @@ $('#next').onclick = () => { mView.d = 0; mView.m++; if (mView.m > 12) { mView.m
 /* ---------- navigation ---------- */
 const ORDER = ['home', 'month', 'city'];
 let cur = 'home';
-function go(id) {
+const DESK = matchMedia('(min-width: 1024px)');
+// desktop: city, language and theme live in the top bar, as in the design; on phones they sit on the painting
+const placeControls = () => (DESK.matches ? $('.rail') : $('#sky')).insertBefore($('.hdr-top'), DESK.matches ? null : $('#sky .plate'));
+placeControls();
+DESK.addEventListener('change', placeControls);
+// each tab has its own address (#monthly, #city) so a refresh or the back button keeps your place
+const HASH = { home: '', month: '#monthly', city: '#city' };
+const fromHash = () => Object.keys(HASH).find((k) => HASH[k] && HASH[k] === location.hash) || 'home';
+function go(id, { push = true } = {}) {
   if (id === cur) return;
+  if (push && location.hash !== HASH[id]) history.pushState(null, '', HASH[id] || location.pathname + location.search);
   const dir = ORDER.indexOf(id) > ORDER.indexOf(cur) ? 'from-right' : 'from-left';
   cur = id;
   $$('.screen').forEach((s) => { s.classList.remove('on', 'from-right', 'from-left'); if (s.id === id) s.classList.add('on', dir); });
@@ -476,6 +692,7 @@ function go(id) {
   if (id === 'month') { const z = zoned(city.z); mView = { y: z.y, m: z.m }; drawMonth(); if (!RM) restart($('.mcal'), 'drawing'); }
 }
 $$('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go)));
+addEventListener('popstate', () => go(fromHash(), { push: false }));
 new IntersectionObserver(([e]) => $('#mini').classList.toggle('show', cur === 'home' && !e.isIntersecting), { rootMargin: '-120px 0px 0px 0px' }).observe($('#sky'));
 
 /* ---------- theme ---------- */
@@ -509,12 +726,12 @@ function applyLang() {
   net();
   if (city) { renderLoc(false); drawCities(); if (state.today) renderStatic(); state.next = -1; tick(true); drawMonth(); }
 }
-$('#lang').addEventListener('click', () => { LANG = LANG === 'id' ? 'en' : 'id'; store.set('lang', LANG); applyLang(); buzz(6); toast(t('t.lang')); });
+$('#lang').addEventListener('click', () => { LANG = LANG === 'id' ? 'en' : 'id'; store.set('lang', LANG); applyLang(); buzz(6); toast(t('t.lang'), null, t('k.lang')); });
 
 
 /* ---------- connection ---------- */
 function net() { const n = $('#net'); if (navigator.onLine) { n.classList.remove('show'); return; } n.textContent = t('offline'); n.classList.add('show'); }
-addEventListener('online', () => { net(); toast(t('t.online')); if (state.status === 'offline') { yearCache.clear(); loadToday(); } });
+addEventListener('online', () => { net(); toast(t('t.online'), null, t('k.net')); if (state.status === 'offline') { yearCache.clear(); loadToday(); } });
 addEventListener('offline', net);
 
 /* ---------- install prompt (Android/desktop Chromium; iOS uses Share > Add to Home Screen) ---------- */
@@ -541,7 +758,7 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       const w = reg.installing;
       w && w.addEventListener('statechange', () => {
         if (w.state !== 'installed') return;
-        if (!navigator.serviceWorker.controller) toast(t('t.offline'));
+        if (!navigator.serviceWorker.controller) toast(t('t.offline'), null, t('k.saved'));
       });
     });
     const check = () => { if (navigator.onLine) reg.update().catch(() => {}); };
@@ -568,10 +785,11 @@ if (CITIES.length) {
   // arriving on a city page with nothing saved yet: that city becomes the default
   const first = initialCity();
   applyCity(first, { save: first.id === PAGE_CITY && !store.get('city'), animate: false });
+  go(fromHash(), { push: false });
 } else {
   state.status = 'offline'; $('#locname').textContent = '—'; drawCities();
   $('#list').innerHTML = `<li class="state">${t('city.loadfail')}</li>`;
 }
 setInterval(() => tick(), 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(true); });
-addEventListener('resize', () => { if (state.times) drawSun(); });
+addEventListener('resize', () => { if (state.times) drawSun(); stickTops(); });

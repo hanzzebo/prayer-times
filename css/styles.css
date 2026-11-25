@@ -10,15 +10,15 @@
 /* tokens: the brand sheet palette. Persimmon is for lines and big marks; text on a persimmon fill uses the deeper one */
 :root{
   --bg:#F2E6C9;--ivory:#FFF6E6;--ink:#1D1F21;--brown:#4A3121;--muted:#6B5444;--rule:#D7BF8F;
-  --copper:#B87533;--accent:#8A4F1A;--persimmon:#E25A2A;--fill:#C0431A;--on-fill:#FFFFFF;--gold:#D4AF37;
+  --copper:#B87533;--accent:#8A4F1A;--persimmon:#E25A2A;--fill:#C0431A;--on-fill:#FFFFFF;--gold:#D4AF37;--line:#B8862B;
   --glow:242,230,201;--focus:#8A4F1A;
   --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
   --ease:cubic-bezier(.2,.8,.2,1);
   --jost:'Jost',system-ui,sans-serif;--sora:'Sora',system-ui,sans-serif;
 }
 /* night: Ink ground, sand text, one persimmon-on-dark */
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#1D1F21;--ivory:#26292C;--ink:#F0E4C8;--brown:#C9BC9F;--muted:#A99D84;--rule:#3A3430;--copper:#E9D3A2;--accent:#F08A5D;--persimmon:#F08A5D;--fill:#F08A5D;--on-fill:#1D1F21;--glow:29,31,33;--focus:#F08A5D}}
-:root[data-theme="dark"]{--bg:#1D1F21;--ivory:#26292C;--ink:#F0E4C8;--brown:#C9BC9F;--muted:#A99D84;--rule:#3A3430;--copper:#E9D3A2;--accent:#F08A5D;--persimmon:#F08A5D;--fill:#F08A5D;--on-fill:#1D1F21;--glow:29,31,33;--focus:#F08A5D}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#1D1F21;--ivory:#26292C;--ink:#F0E4C8;--brown:#C9BC9F;--muted:#A99D84;--rule:#3A3430;--copper:#E9D3A2;--accent:#F08A5D;--persimmon:#F08A5D;--fill:#F08A5D;--on-fill:#1D1F21;--glow:29,31,33;--focus:#F08A5D;--line:#D4AF37}}
+:root[data-theme="dark"]{--bg:#1D1F21;--ivory:#26292C;--ink:#F0E4C8;--brown:#C9BC9F;--muted:#A99D84;--rule:#3A3430;--copper:#E9D3A2;--accent:#F08A5D;--persimmon:#F08A5D;--fill:#F08A5D;--on-fill:#1D1F21;--glow:29,31,33;--focus:#F08A5D;--line:#D4AF37}
 
 *{box-sizing:border-box;margin:0}
 html,body{overflow-x:clip}
@@ -40,21 +40,60 @@ button:not(:disabled):active{transform:scale(.96)}
 
 /* ---------- hero: the next prayer's painting arrives as its line drawing first ---------- */
 .hero{position:relative;height:min(470px,62vh);min-height:400px;display:flex;flex-direction:column;isolation:isolate;padding-top:var(--sat)}
-.art{position:absolute;inset:0;z-index:-1;overflow:hidden;background:var(--bg)}
-.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:var(--pos,70% 70%)}
+.art{position:absolute;inset:0;z-index:-1;overflow:hidden;background:var(--bg);container-type:size}
 .art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:56px;background:linear-gradient(180deg,rgba(var(--glow),0),rgba(var(--glow),.6) 55%,var(--bg))}
-.grid{position:absolute;inset:0;width:100%;height:100%;stroke:var(--gold);opacity:.6}
-.grid *{stroke-dasharray:1;stroke-dashoffset:0}
+/* the frame covers the box the way object-fit:cover would, so the painting, its trace and the grid stay in register */
+.frame{position:absolute;left:var(--px,74%);top:var(--py,70%);width:max(100cqw,calc(100cqh * 1800 / 1004));aspect-ratio:1800/1004;transform:translate(calc(var(--px,74%) * -1),calc(var(--py,70%) * -1))}
+.frame>*{position:absolute;inset:0;width:100%;height:100%}
+.grid{stroke:var(--gold);opacity:.55;transition:opacity .8s ease}
+.grid *{stroke-width:1;vector-effect:non-scaling-stroke;stroke-dasharray:1;stroke-dashoffset:0}
+.grid .d{stroke-dasharray:2 6}
+/* three copper lines drift across the sky, as on the canvas */
+.flow{position:absolute;inset:0;width:100%;height:100%;stroke:#B87533;stroke-width:1;opacity:.5;pointer-events:none}
+.flow path{stroke-dasharray:520 280;animation:flow 24s linear infinite}
+.flow path:nth-child(2){animation-duration:31s}.flow path:nth-child(3){animation-duration:38s}
+@keyframes flow{to{stroke-dashoffset:-800}}
 .paint{opacity:0;transition:opacity 1.2s ease}
-.paint.show{opacity:1}
-.lines{opacity:0;transition:opacity .8s ease}
-.lines.show{opacity:.9}
-.drawing .grid *{animation:draw 1.6s var(--ease) both}
-.drawing .grid :nth-child(2){animation-delay:.12s}.drawing .grid :nth-child(3){animation-delay:.24s}.drawing .grid :nth-child(4){animation-delay:.36s}.drawing .grid :nth-child(5){animation-delay:.48s}.drawing .grid :nth-child(6){animation-delay:.6s}
-.drawing .lines{animation:wipe 1.4s ease-in-out .6s both}
+.paint.in{opacity:1}
+#paint0{transition:none}
+.lines{opacity:0}
+.banner .lines{opacity:.9}
+/* a new sky: the grid draws, the traced lines wipe in over the old painting, the new painting fills in under them, the lines fade */
+.drawing .grid *{animation:draw 1.4s var(--ease) both}
+.drawing .grid :nth-child(2){animation-delay:.1s}.drawing .grid :nth-child(3){animation-delay:.2s}.drawing .grid :nth-child(4){animation-delay:.3s}.drawing .grid :nth-child(5){animation-delay:.4s}.drawing .grid :nth-child(6){animation-delay:.5s}
+.drawing .lines{animation:sketch 3.4s ease-in-out .3s both}
 @keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@keyframes wipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes sketch{0%{opacity:1;clip-path:inset(0 100% 0 0)}40%{opacity:1;clip-path:inset(0 0 0 0)}70%{opacity:1;clip-path:inset(0 0 0 0)}100%{opacity:0;clip-path:inset(0 0 0 0)}}
+.banner .grid *{animation:draw 1.6s var(--ease) both}
+.banner .lines{animation:sketch-in 1.4s ease-in-out .6s both}
+@keyframes sketch-in{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
 
+/* first load (LoadingGrid board): the sky is being drafted. Faint column rules, the grid draws on a loop,
+   the traced sky sketches in and out, and the title reads "Loading times…" beside a turning ring */
+.hero.loading .art{background:repeating-linear-gradient(90deg,rgba(212,175,55,.22) 0 1px,transparent 1px 39px),var(--bg)}
+.hero.loading .paint,.hero.loading .flow{opacity:0!important}
+.hero.loading .grid{opacity:1}
+.hero.loading .grid *{animation:lgdraw 4.8s ease-in-out infinite}
+.hero.loading .grid :nth-child(2){animation-delay:.2s}.hero.loading .grid :nth-child(3){animation-delay:.4s}.hero.loading .grid :nth-child(4){animation-delay:.6s}.hero.loading .grid :nth-child(5){animation-delay:.8s}.hero.loading .grid :nth-child(6){animation-delay:1s}
+@keyframes lgdraw{0%{stroke-dashoffset:1;opacity:.75}40%,70%{stroke-dashoffset:0;opacity:.75}100%{stroke-dashoffset:-1;opacity:.2}}
+.hero.loading .grid .d{stroke-dasharray:2 6;animation-name:lgfade}
+@keyframes lgfade{0%,100%{opacity:.2}40%,70%{opacity:.75}}
+.hero.loading .lines{animation:lgk 4.8s ease-in-out infinite}
+@keyframes lgk{0%{opacity:.55;clip-path:inset(0 100% 0 0)}45%{opacity:.55;clip-path:inset(0 0 0 0)}75%{opacity:.55;clip-path:inset(0 0 0 0)}100%{opacity:0;clip-path:inset(0 0 0 0)}}
+.hero.loading #har,.hero.loading .khatam,.hero.loading .when,.hero.loading #hnext,.hero.loading .hdate{display:none}
+.hero.loading .title h1{font-size:34px;line-height:1.1}
+.hero.loading .ring svg{animation:rot 1.2s linear infinite}
+.hero.loading #ringarc{stroke-dasharray:25 75}
+/* guide rows stand in for the five prayers while they load */
+.pr.guide{grid-template-columns:28px minmax(0,1fr) 64px;animation:none}
+.pr.guide .num{border:1px dashed var(--copper);color:var(--copper)}
+.pr.guide .rule{display:block;height:1px;position:relative;overflow:hidden;background:linear-gradient(90deg,var(--gold) 0 40%,transparent 40%) 0 0/8px 1px repeat-x}
+.pr.guide .rule::after{content:"";position:absolute;inset:-2px auto -2px 0;width:30%;background:linear-gradient(90deg,transparent,var(--copper),transparent);animation:lgrun 1.8s ease-in-out infinite}
+@keyframes lgrun{from{transform:translateX(-100%)}to{transform:translateX(340%)}}
+
+/* the plate and the phone's top pills take their colours from the painting behind them, in either theme */
+.hero[data-sky="light"] :is(.plate,.hdr-top){--ink:#1D1F21;--brown:#4A3121;--muted:#6B5444;--accent:#8A4F1A;--persimmon:#E25A2A;--fill:#C0431A;--on-fill:#FFFFFF;--glow:242,230,201;color:var(--ink)}
+.hero[data-sky="dark"] :is(.plate,.hdr-top){--ink:#F0E4C8;--brown:#C9BC9F;--muted:#A99D84;--accent:#F08A5D;--persimmon:#F08A5D;--fill:#F08A5D;--on-fill:#1D1F21;--glow:29,31,33;color:var(--ink)}
 .hdr-top{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px}
 .loc,.hbtn{min-height:44px;border:1px solid color-mix(in srgb,var(--brown) 30%,transparent);border-radius:999px;background:rgba(var(--glow),.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:12px;letter-spacing:.08em;color:var(--ink)}
 .loc{padding:0 14px;max-width:62vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -89,22 +128,12 @@ button:not(:disabled):active{transform:scale(.96)}
 .swap{animation:swapin .4s var(--ease)}
 @keyframes swapin{from{opacity:0;transform:translateY(8px)}}
 
-/* ---------- today: date, imsak and sunrise, week strip, the five steps ---------- */
+/* ---------- today: date, imsak and sunrise, the five steps ---------- */
 .body{padding:4px 20px 0}
 .date{font-size:12px;color:var(--brown)}
 .date #hijri::before{content:" · "}
 .date #hijri:empty::before{content:none}
 .extra{margin:6px 0 4px;font-family:var(--jost);font-size:13px;letter-spacing:.06em;color:var(--brown);font-variant-numeric:tabular-nums}
-.week{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin:12px -4px 6px}
-.wd{min-height:52px;border:0;border-radius:999px;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--muted)}
-.wd span{font-family:var(--jost);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
-.wd b{font-family:var(--jost);font-weight:400;font-size:17px;font-variant-numeric:tabular-nums;color:var(--ink)}
-.wd[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.wd[aria-pressed="true"] b{color:var(--bg)}
-.wd[data-o="0"]:not([aria-pressed="true"]) b{color:var(--accent);font-weight:500}
-.notice{margin:8px 0;padding:10px 14px;border:1px solid var(--rule);border-radius:18px;font-size:14px;line-height:1.45;color:var(--brown)}
-.notice[hidden]{display:none}
-.linkbtn{border:0;background:none;padding:0;min-height:0;color:var(--accent);text-decoration:underline;font-size:inherit}
 
 .steps{list-style:none;padding:0;margin:4px 0 0;background:linear-gradient(var(--rule),var(--rule)) no-repeat 13.5px 22px/1px calc(100% - 44px)}
 .pr{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:48px;animation:rowin .35s var(--ease) both;animation-delay:calc(var(--i)*40ms)}
@@ -125,23 +154,53 @@ button:not(:disabled):active{transform:scale(.96)}
 .state{padding:24px 0;font-size:16px;color:var(--muted)}
 
 /* ---------- the sun today and qibla ---------- */
-.sun{margin-top:28px;padding-top:16px;border-top:1px solid var(--ink)}
+.sun{margin-top:28px;padding-top:16px;border-top:1px solid var(--ink);container-type:inline-size}
 .sun h2{font-weight:400;font-size:15px;letter-spacing:.16em}
-.sunchart{display:block;width:100%;height:auto;margin-top:8px;overflow:visible}
-.sunchart .arcbg{fill:none;stroke:var(--rule);stroke-width:1.5;stroke-dasharray:3 6}
-.sunchart .arcdone{fill:none;stroke:var(--persimmon);stroke-width:2;stroke-linecap:round}
-.sunchart .hz{stroke:var(--ink);stroke-width:1}
-.sunchart .gc{fill:none;stroke:var(--gold);stroke-width:1;opacity:.7}
+.sunchart{position:relative;height:270px;margin-top:16px}
+.sunchart>svg{position:absolute;left:0;top:0;width:100%;height:200px;overflow:visible}
+.sunchart .arcbg{fill:none;stroke:var(--brown);stroke-opacity:.45;stroke-width:1;stroke-dasharray:2 5;vector-effect:non-scaling-stroke}
+.sunchart .arcdone{fill:none;stroke:var(--persimmon);stroke-width:2;vector-effect:non-scaling-stroke}
+.sunchart .hz{stroke:var(--ink);stroke-width:1;vector-effect:non-scaling-stroke}
+.sunchart .tk{stroke:var(--brown);stroke-opacity:.5;stroke-width:1;stroke-dasharray:1 3;vector-effect:non-scaling-stroke}
+.sunchart .ico{position:absolute;transform:translateX(-50%);display:block}
+.sunchart .ico svg{display:block;width:100%;height:100%}
+.sunchart .gd{fill:none;stroke:var(--gold);stroke-dasharray:2 4}
+.sunchart .g{fill:none;stroke:var(--gold)}
+.sunchart .r,.sunchart .r line{stroke:var(--copper);stroke-width:1.2;stroke-linecap:round}
 .sunchart .disc{fill:var(--persimmon)}
-.sunchart .mk{stroke:var(--copper);stroke-width:1}
-.sunchart text{font-family:var(--jost);font-size:12px;letter-spacing:.1em;fill:var(--brown)}
-.sunchart text.t{font-size:15px;letter-spacing:0;fill:var(--ink)}
-.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px 0;margin:14px 0 0;padding-top:12px;border-top:1px solid var(--rule)}
-.facts>div{padding-right:12px}
+/* the night (NightChart board): Maghrib to Fajr on ink, the moon where the night is now */
+.sun.night{--bg:#1D1F21;--ivory:#26292C;--ink:#F0E4C8;--brown:#C9BC9F;--muted:#A99D84;--rule:#3A3430;--copper:#E9D3A2;--accent:#F08A5D;--persimmon:#F08A5D;--focus:#F08A5D;background:var(--bg);color:var(--ink);margin-left:-20px;margin-right:-20px;padding:20px 20px 24px;border-top:0}
+:root[data-theme="dark"] .sun.night{--bg:#26292C}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sun.night{--bg:#26292C}}
+.night .arcbg{stroke:#E9D3A2;stroke-opacity:.4}
+.night .arcdone{stroke:#E9D3A2}
+.night .hz{stroke-opacity:.6}
+.night .tk{stroke:#E9D3A2}
+.night .mdisc{fill:#E9D3A2}.night .mcut{fill:var(--bg)}
+.night .gd,.night .g,.night .r line{stroke:var(--gold);stroke-opacity:.75}
+.night .mark.gold span{color:var(--gold)}
+/* midpoint and last third sit ~20% of the chart apart, so their long labels collide below ~1000px unless wrapped */
+.night .mark.m3 span,.night .mark.m4 span{white-space:normal;max-width:9em;text-align:center;line-height:1.25}
+.night .mark.next span{color:var(--accent)}.night .mark.next b{font-weight:500;font-size:18px;color:var(--accent)}
+.moon{animation:moonin 1.4s var(--ease) both}
+@keyframes moonin{from{opacity:0;translate:0 6px}}
+.mark{position:absolute;top:184px;display:flex;flex-direction:column;align-items:center;gap:2px;white-space:nowrap;font-family:var(--jost)}
+.mark span{font-size:12px;letter-spacing:.12em;color:var(--brown)}
+.mark b{font-weight:300;font-size:16px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.mark.next span{color:var(--accent)}
+.mark.next b{font-weight:500;font-size:18px;color:var(--accent)}
+/* phones: Asr, Maghrib and Isha are ~25px apart on the time axis, so the labels sit in one even row under the horizon */
+/* by the chart's own width, not the viewport: tablets show it in a narrow column */
+@container (max-width:820px){.sunchart{height:auto;padding-top:184px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}.mark{position:static;transform:none!important}.night .mark span{white-space:normal;text-align:center;line-height:1.25}.mark{text-align:center}.mark span{font-size:11px;letter-spacing:.08em}}
+/* facts: two figures split by a hairline, then qibla on its own ruled row, each with room to read */
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin:18px 0 0;border-top:1px solid var(--ink)}
+.facts>div{padding:14px 12px 16px 0;min-width:0}
+.facts>div:nth-child(2){padding-left:16px;border-left:1px solid var(--rule)}
+.facts dd{overflow-wrap:anywhere}
 .facts dt{font-size:12px;color:var(--brown)}
 .facts dd{margin:2px 0 0;font-size:14px;color:var(--muted)}
 .facts dd.big{font-family:var(--jost);font-weight:300;font-size:28px;white-space:nowrap;color:var(--ink);font-variant-numeric:tabular-nums}
-.qibla{display:flex;align-items:center;gap:14px;grid-column:1/-1}
+.qibla{display:flex;align-items:center;gap:16px;grid-column:1/-1;padding-top:16px!important;border-top:1px solid var(--rule)}
 #compass .c1{fill:none;stroke:var(--gold);stroke-dasharray:2 4}
 #compass .c2{fill:none;stroke:var(--gold)}
 #compass .ticks{stroke:var(--copper);stroke-width:1.2;stroke-linecap:round}
@@ -149,9 +208,10 @@ button:not(:disabled):active{transform:scale(.96)}
 #compass .n1{fill:var(--persimmon)}#compass .n2{fill:var(--rule)}#compass .hub{fill:var(--ink)}
 #needle{transform-origin:42px 42px;transition:transform 1s var(--ease)}
 
-.foot{margin-top:20px;font-size:13px;line-height:1.5;color:var(--muted)}
-.foot+.foot{margin-top:6px}
-.install{display:none;margin:16px 0 0;min-height:44px;padding:0 18px;border:1px solid var(--ink);border-radius:999px;background:none;font-size:12px}
+/* the small print sits apart from the figures, closed by the install pill */
+.foot{margin-top:32px;padding-top:14px;border-top:1px dashed var(--gold);font-size:13px;line-height:1.55;color:var(--muted)}
+.foot+.foot{margin-top:4px;padding-top:0;border-top:0}
+.install{display:none;margin:20px 0 8px;min-height:48px;padding:0 22px;border:1px solid var(--ink);border-radius:999px;background:none;font-size:12px}
 .install.show{display:block}
 
 /* ---------- bottom nav: a stepper rail; the open tab is a persimmon khatam ---------- */
@@ -170,7 +230,6 @@ button:not(:disabled):active{transform:scale(.96)}
 /* ---------- city ---------- */
 .banner{position:relative;height:176px;padding-top:var(--sat);display:flex;align-items:flex-end;isolation:isolate}
 .banner .art{background:var(--bg)}
-.banner .art img{--pos:70% 62%}
 .banner .plate{margin:0 0 6px 4px;padding:10px 14px}
 .banner h1{font-family:var(--jost);font-weight:300;font-size:30px;line-height:1.05;letter-spacing:.04em;text-transform:uppercase}
 .banner p{font-size:16px;margin-top:2px}
@@ -203,6 +262,70 @@ button:not(:disabled):active{transform:scale(.96)}
 .chk{width:20px;height:20px;color:var(--accent)}
 .empty{padding:16px 0;font-size:18px;line-height:1.45}
 .privacy{margin:12px 0 0;font-size:13px;color:var(--muted)}
+.cside{display:flex;flex-direction:column;gap:10px}
+.city small:not(:empty){color:var(--accent)}
+.clist:has(.grp) .city small{color:var(--brown)}
+.city[aria-current="true"] small{color:var(--accent)}
+/* no match: the archipelago on its graticule, a target hopping between cities; the band runs to the screen edges */
+.nomatch{display:flex;flex-direction:column;align-items:center;gap:14px;padding:8px 0 24px;text-align:center;column-span:all}
+.nm-band{align-self:stretch;margin:0 -16px;height:min(40.4vw,62vh);overflow:hidden}
+.nm-map{display:block;width:100%;height:100%;overflow:visible}
+.nm-map *{vector-effect:non-scaling-stroke}
+.nm-grid line{stroke:var(--line);stroke-opacity:.16}
+.nm-grid .m{stroke-opacity:.4;stroke-dasharray:3 4}
+.nm-near path{fill:none;stroke:var(--line);stroke-opacity:.35;stroke-dasharray:2 3}
+.nm-isl path{fill:var(--line);fill-opacity:.07;stroke:var(--line);stroke-width:1.2;stroke-linejoin:round}
+.nm-isl{animation:sketch-in 2.4s ease-out both}
+.nm-dots{fill:#B87533;opacity:.6;animation:nm-fade 1.2s ease-out 1.6s both}
+.nm-hit{fill:none;stroke:var(--persimmon);stroke-width:1.5}
+.nm-ret{transform:translate(var(--rx),var(--ry));animation:nm-hop 15s cubic-bezier(.6,0,.3,1) 2s infinite both}
+.nm-ret line{stroke:var(--persimmon);stroke-opacity:.55;stroke-dasharray:4 4}
+.nm-ret circle{fill:none;stroke:var(--line)}
+.nm-ret .pt{fill:var(--persimmon);stroke:none}
+.nm-ret .ping{stroke:var(--persimmon);transform-box:fill-box;transform-origin:center;animation:nm-ping 3s ease-out 2s infinite both}
+/* labels are in map units, so they are sized per screen to read at about 12px */
+.nm-lab{font:500 11px var(--jost);letter-spacing:.16em;fill:var(--ink);opacity:0;animation:nm-lab 15s 2s infinite both;paint-order:stroke;stroke:var(--bg);stroke-width:6px;stroke-linejoin:round;vector-effect:none}
+@media (max-width:699px){.nm-lab{font-size:26px;stroke-width:12px}}
+@media (min-width:2200px){.nm-lab{font-size:7px;stroke-width:4px}}
+@keyframes nm-fade{from{opacity:0}}
+@keyframes nm-ping{0%{transform:scale(.2);opacity:1}70%,100%{transform:scale(2.4);opacity:0}}
+@keyframes nm-lab{0%,2%{opacity:0}5%,12%{opacity:1}15%,100%{opacity:0}}
+@keyframes nm-hop{0%,13%,100%{transform:translate(var(--x0),var(--y0))}20%,33%{transform:translate(var(--x1),var(--y1))}40%,53%{transform:translate(var(--x2),var(--y2))}60%,73%{transform:translate(var(--x3),var(--y3))}80%,93%{transform:translate(var(--x4),var(--y4))}}
+.nomatch .empty{padding:0;font-size:19px;max-width:36ch;text-shadow:0 0 12px rgb(var(--glow)),0 0 24px rgb(var(--glow))}
+.nomatch .chip{align-self:center}
+.chip{align-self:flex-start;width:auto;min-height:44px;padding:0 18px;border:1px solid var(--ink);border-radius:999px;font-size:17px;animation:none}
+.gps[data-state="retry"]{background:var(--fill);color:var(--on-fill)}
+.gps[data-state="off"]{background:none;color:var(--ink);border:1px solid var(--ink)}
+/* the city list: one block per province, its heading sticks under the controls; tablets lay the cities out two across */
+.grp{position:sticky;top:calc(var(--railh,0px) + var(--pinh,0px));z-index:4;background:var(--bg);margin:0;padding-top:14px;font-weight:400}
+.pcities{display:grid;grid-template-columns:minmax(0,1fr);column-gap:40px}
+@media (min-width:700px){.pcities{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.crow{display:flex;gap:8px;align-items:center}
+.crow .field{flex:1;min-width:0}
+.provs{display:flex}
+.provs:empty{display:none}
+/* provinces as stops on a route, the brand sheet's stepper: a copper line, a dot per stop,
+   filled once you've passed it, the persimmon diamond where you are */
+.provs button{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;gap:7px;min-height:44px;padding:6px 12px 4px;border:0;background:none;color:var(--muted);font-family:var(--jost);font-size:11px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;transition:color .18s ease}
+.provs button::before{content:"";position:absolute;left:0;right:0;top:11px;height:1px;background:var(--line);opacity:.55}
+.provs button:first-child::before{left:50%}.provs button:last-child::before{right:50%}
+.provs i{position:relative;width:10px;height:10px;border-radius:50%;border:1px solid var(--line);background:var(--bg);box-sizing:border-box;transition:background-color .2s ease,transform .3s var(--ease)}
+.provs small{display:none;font-size:11px;letter-spacing:0;font-variant-numeric:tabular-nums;color:var(--muted)}
+.provs button:not(:disabled):hover{color:var(--ink);box-shadow:none}
+.provs button.done::before,.provs button[aria-current="true"]::before{opacity:1}.provs button:hover i{transform:scale(1.3)}
+.provs button.done{color:var(--brown)}.provs button.done i{background:var(--line)}
+.provs button[aria-current="true"]{color:var(--ink)}
+.provs button[aria-current="true"] i{border:0;border-radius:0;background:var(--persimmon);transform:rotate(45deg);box-shadow:0 0 0 4px color-mix(in srgb,var(--persimmon) 22%,transparent);animation:stop-in .45s var(--ease)}
+@keyframes stop-in{from{transform:rotate(-45deg) scale(.4)}}
+/* phone and tablet: search, location, zones and the province strip pin to the top while the list scrolls */
+@media (max-width:1023px){
+  .cside{display:contents}
+  .cpin{position:sticky;top:0;z-index:5;display:flex;flex-direction:column;gap:8px;margin:0 -16px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--rule)}
+  .gps{flex:none;width:48px;height:48px;padding:0;border-radius:50%}
+  #gpslabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .provs{overflow-x:auto;margin:0 -16px;padding:0 16px;scrollbar-width:none}
+  .provs::-webkit-scrollbar{display:none}
+}
 
 /* ---------- month ---------- */
 .mbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(var(--sat) + 18px) 16px 0}
@@ -212,15 +335,17 @@ button:not(:disabled):active{transform:scale(.96)}
 .nav{width:44px;height:44px;border:1px solid var(--ink);border-radius:50%;background:none;display:grid;place-items:center}
 .mbody{padding:12px 16px 0}
 .mcal{position:relative}
-.mgrid{position:absolute;left:0;right:0;bottom:0;top:28px;width:100%;height:calc(100% - 28px);stroke:var(--gold);opacity:.35;pointer-events:none}
-.mgrid *{stroke-dasharray:1;vector-effect:non-scaling-stroke;stroke-width:1}
-.mcal.drawing .mgrid *{animation:draw .9s var(--ease) both}
-.cgrid{position:relative;display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;text-align:center}
+/* gold lattice drawn on the date rows themselves (fixed 46px rows, as on the canvas), so it can't drift off the dates */
+.cgrid::before{content:"";position:absolute;z-index:-1;left:0;right:0;top:28px;bottom:0;border-right:1px solid var(--gold);border-bottom:1px solid var(--gold);opacity:.35;pointer-events:none;
+  background:linear-gradient(var(--gold) 1px,transparent 1px) 0 0/100% 46px,linear-gradient(90deg,var(--gold) 1px,transparent 1px) 0 0/calc(100% / 7) 100%}
+.mcal.drawing .cgrid::before{animation:gridin .9s var(--ease) both}
+@keyframes gridin{from{opacity:0}}
+.cgrid{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:28px;grid-auto-rows:46px;text-align:center}
 .cgrid .wd{min-height:28px;font-family:var(--jost);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:grid;place-items:center}
-.cday{justify-self:center;width:44px;height:44px;border:0;border-radius:50%;background:none;font-family:var(--jost);font-size:16px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.cday{justify-self:center;align-self:center;width:44px;height:44px;border:0;border-radius:50%;background:none;font-family:var(--jost);font-size:16px;font-variant-numeric:tabular-nums;color:var(--ink)}
 .cday.past{color:var(--muted);font-weight:300}
 .cday[aria-pressed="true"]{border:1.5px solid var(--ink);background:var(--ivory);font-weight:500}
-.cday.today{background:var(--fill);color:var(--on-fill);font-weight:500;border:0}
+.cday.today{background:var(--fill);color:var(--on-fill);font-weight:500;border:0;box-shadow:none}
 .from-right .cday{animation:dayr .4s var(--ease) both}.from-left .cday{animation:dayl .4s var(--ease) both}
 @keyframes dayr{from{opacity:0;transform:translateX(16px)}}@keyframes dayl{from{opacity:0;transform:translateX(-16px)}}
 .mday{margin-top:16px;padding-top:12px;border-top:1px solid var(--ink)}
@@ -234,15 +359,47 @@ button:not(:disabled):active{transform:scale(.96)}
 .mini{position:fixed;top:0;left:50%;width:100%;max-width:440px;z-index:6;display:flex;justify-content:space-between;align-items:center;padding:calc(var(--sat) + 10px) 20px 12px;background:var(--bg);border-bottom:1px solid var(--rule);font-family:var(--jost);letter-spacing:.08em;font-variant-numeric:tabular-nums;text-transform:uppercase;transform:translate(-50%,-100%);transition:transform .25s var(--ease)}
 .mini.show{transform:translate(-50%,0)}
 .mini small{color:var(--muted);text-transform:none;letter-spacing:0;font-size:14px}
-.toast{position:fixed;left:50%;top:calc(var(--sat) + 10px);z-index:7;display:flex;align-items:center;justify-content:space-between;gap:12px;width:calc(100% - 32px);max-width:408px;padding:6px 6px 6px 20px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:15px;transform:translate(-50%,-140%);opacity:0;pointer-events:none;transition:transform .26s var(--ease),opacity .2s ease}
-.toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+/* toast as an achievement banner: an ink band opens from its centre, a gold construction medallion draws
+   itself and the khatam spins into place, gold wings reach out from both sides, a sheen passes once */
+.toast{--tink:#1D1F21;--tsand:#F0E4C8;--tgold:#D4AF37;position:fixed;left:50%;top:calc(var(--sat) + 12px);z-index:7;display:flex;align-items:center;gap:12px;width:calc(100% - 96px);max-width:420px;min-height:64px;padding:8px 6px 8px 10px;background:var(--tink);color:var(--tsand);box-shadow:inset 0 0 0 1px rgba(212,175,55,.55),inset 0 0 0 4px var(--tink),inset 0 0 0 5px rgba(212,175,55,.22),0 10px 28px rgba(29,31,33,.28);transform:translate(-50%,-150%);opacity:0;pointer-events:none;transition:transform .3s var(--ease),opacity .2s ease}
+:root[data-theme="dark"] .toast{--tink:#2A2D30}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .toast{--tink:#2A2D30}}
+.toast.show{transform:translate(-50%,0);opacity:1;pointer-events:auto;animation:topen .5s var(--ease) both}
 .toast.drag{transition:none}
-.toast button{border:0;background:none;color:var(--bg);min-height:44px;padding:0 10px;border-radius:999px;font-family:var(--jost);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
-.toast .tx{width:44px;padding:0;display:grid;place-items:center}
+@keyframes topen{from{clip-path:inset(-40px 50% -40px 50%)}to{clip-path:inset(-40px -70px -40px -70px)}}
+.toast::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(240,228,200,.16) 50%,transparent 65%) no-repeat;background-size:250% 100%;background-position:120% 0;opacity:0}
+.toast.show::after{animation:tsheen 1.1s ease .55s both}
+@keyframes tsheen{from{opacity:1;background-position:120% 0}to{opacity:1;background-position:-30% 0}}
+.tem{width:46px;height:46px;flex:none}
+.tem svg{display:block;width:100%;height:100%;overflow:visible}
+.tem .tr{fill:none;stroke:var(--tgold);stroke-width:1;stroke-dasharray:1;opacity:.8}
+.tem .tr line{stroke-dasharray:.04 .06;opacity:.7}
+.tem .tk{fill:none;stroke:#E25A2A;stroke-width:1.6;transform-origin:24px 24px}
+.tem .tk circle{fill:#E25A2A;stroke:none}
+.toast.show .tr circle{animation:draw .7s var(--ease) .15s both}
+.toast.show .tr circle+circle{animation-delay:.25s}
+.toast.show .tk{animation:tkin .6s cubic-bezier(.2,1.4,.4,1) .35s both}
+@keyframes tkin{from{opacity:0;transform:rotate(-135deg) scale(.3)}}
+.ttx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ttx small{font-family:var(--jost);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--tgold)}
+.ttx small:empty{display:none}
+#tmsg{font-size:15px;line-height:1.3;overflow-wrap:anywhere}
+.toast.show .ttx{animation:ttxin .45s var(--ease) .3s both}
+@keyframes ttxin{from{opacity:0;transform:translateY(6px)}}
+.twing{position:absolute;top:50%;width:48px;height:1px;pointer-events:none}
+.twing.l{right:100%;margin-right:6px;background:linear-gradient(270deg,var(--tgold),transparent);transform-origin:right}
+.twing.r{left:100%;margin-left:6px;background:linear-gradient(90deg,var(--tgold),transparent);transform-origin:left}
+.twing::after{content:"";position:absolute;top:-2px;width:5px;height:5px;transform:rotate(45deg);background:var(--tgold)}
+.twing.l::after{right:-2px}.twing.r::after{left:-2px}
+.toast.show .twing{animation:twing .5s var(--ease) .35s both}
+@keyframes twing{from{transform:scaleX(0);opacity:0}}
+.toast button{border:0;background:none;color:var(--tsand);min-height:44px;padding:0 12px;border-radius:999px;font-family:var(--jost);font-size:12px;letter-spacing:.14em;text-transform:uppercase;flex:none}
+#tact{box-shadow:inset 0 0 0 1px var(--tgold);color:var(--tgold);min-height:36px}
+.toast .tx{width:40px;padding:0;display:grid;place-items:center;color:color-mix(in srgb,var(--tsand) 70%,transparent)}
 
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
-  .lines.show{opacity:.9}.paint.show{opacity:1}
+  .paint.in{opacity:1}
 }
 
 /* ---------- camel walker ---------- */
@@ -267,29 +424,162 @@ button:not(:disabled):active{transform:scale(.96)}
 @keyframes c-hind{0%,40%{transform:rotate(0)}62%{transform:rotate(18deg)}78%{transform:rotate(40deg)}94%,100%{transform:rotate(0)}}
 @keyframes dip{0%,100%{transform:translateY(1.2px);animation-timing-function:ease-out}50%{transform:translateY(-.3px);animation-timing-function:ease-in}}
 
-/* ---------- desktop: the rail moves to the top, today and the sun sit side by side ---------- */
+/* ---------- monthly extras: hijri dates and fasting days, month in light, five skies ---------- */
+.cday{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1.05}
+.cday small{font-size:9.5px;letter-spacing:.02em;color:var(--muted);font-weight:300}
+.cday.today small{color:inherit;opacity:.8}
+.cday.bidh{box-shadow:inset 0 0 0 1px var(--gold)}
+.cday.bidh:not(.today)::after{content:"";width:3px;height:3px;border-radius:50%;background:var(--gold);margin-top:1px}
+.cgrid .wd:nth-child(1),.cgrid .wd:nth-child(4){color:var(--copper)}
+.mlegend{display:flex;flex-wrap:wrap;gap:6px 20px;margin:12px 16px 0;font-size:12px;color:var(--muted)}
+.mlegend span{display:inline-flex;align-items:center;gap:8px}
+.lg-b::before{content:"";width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--gold)}
+.lg-s::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--copper)}
+.mlight,.mskies{margin:28px 16px 0;padding-top:12px;border-top:1px solid var(--ink)}
+.mlight h2,.mskies h2{font-family:var(--jost);font-weight:400;font-size:15px;letter-spacing:.14em;text-transform:uppercase}
+.msub{margin-top:4px;font-size:13px;color:var(--muted)}
+#mlight{list-style:none;padding:0;margin:12px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px 20px}
+#mlight li{min-width:0}
+.lh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.lh b{font-weight:500;font-size:15px}
+.lh span{font-family:var(--jost);font-size:13px;font-variant-numeric:tabular-nums;color:var(--brown);white-space:nowrap}
+.lchart{position:relative;height:56px;margin-top:6px;background:repeating-linear-gradient(90deg,rgba(212,175,55,.18) 0 1px,transparent 1px 12px)}
+.lchart svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.lg line{stroke:var(--gold);stroke-opacity:.55;stroke-width:1;vector-effect:non-scaling-stroke}
+.lg line:last-child{stroke:var(--ink);stroke-opacity:.6}
+.lp{fill:none;stroke:var(--copper);stroke-width:1.6;vector-effect:non-scaling-stroke;stroke-linejoin:round}
+.drawing .lp{stroke-dasharray:1;animation:draw 1.2s var(--ease) both}
+.ldot{position:absolute;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:var(--persimmon);box-shadow:0 0 0 3px var(--bg)}
+.ld{margin-top:4px;font-size:12px;color:var(--muted)}
+#mskies{list-style:none;padding:0;margin:14px -16px 0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(150px,42%);gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 16px 6px}
+#mskies li{scroll-snap-align:start}
+@media (min-width:700px){#mskies{margin:14px 0 0;padding:0;grid-auto-flow:row;grid-template-columns:repeat(5,minmax(0,1fr));overflow:visible}}
+
+/* painting cards (desktop five prayers, monthly five skies): hover or focus swaps to the line drawing */
+.th{position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--bg)}
+.th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:68% 70%;transition:opacity .6s ease}
+.thk{opacity:0;background:#F2E6C9}
+.th[data-k="6"] .thk{background:#1D1F21}
+.th:hover .thk,.th:focus-visible .thk{opacity:1}
+.th:hover .thp,.th:focus-visible .thp{opacity:.5}
+.thl{display:block;margin-top:8px;font-size:18px}
+.tht{font-family:var(--jost);font-weight:300;font-size:15px;font-variant-numeric:tabular-nums}
+
+/* ---------- desktop: the design's long page. Hero, then today on ink beside the sun, the five paintings, the month table ---------- */
+.dk{display:none}
 @media (min-width:1024px){
-  .app{max-width:1280px;padding-bottom:48px}
-  .rail{position:sticky;top:0;bottom:auto;display:flex;align-items:center;justify-content:space-between;padding:8px 32px;border-top:0;border-bottom:1px solid var(--rule)}
-  .brand{display:block;font-family:var(--jost);font-weight:400;font-size:15px;letter-spacing:.2em}
-  .stops{margin:0;width:420px}
+  :root{--gut:max(32px,calc((100vw - 1600px) / 2 + 32px))}
+  .app{max-width:none;padding-bottom:56px}
+  .dk{display:block}
+  .flow.ph{display:none}
+  .rail{position:sticky;top:0;bottom:auto;display:flex;align-items:center;gap:32px;padding:8px var(--gut);border-top:0;border-bottom:1px solid var(--rule)}
+  .brand{display:block;font-family:var(--jost);font-weight:400;font-size:15px;letter-spacing:.24em}
+  .stops{margin:0;width:360px}
   .stop{min-height:52px}
-  .hero{height:520px;min-height:0}
-  .plate{margin:auto 0 36px 16px;padding:28px 40px 32px}
-  .title h1{font-size:72px}
-  .ar{font-size:36px}
-  .body{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:0 56px;padding:24px 32px 0}
-  .today,.sun{grid-row:1}
-  .sun{margin-top:0}
-  .foot,.install{grid-column:1/-1}
+  /* the city, language and theme controls join the top bar */
+  .rail .hdr-top{margin-left:auto;padding:0}
+  .loc,.hbtn{background:none;backdrop-filter:none;-webkit-backdrop-filter:none;border-color:var(--ink)}
+
+  .hero{height:560px;min-height:0;padding-top:0}
+  .hero .art{--px:50%;--py:100%}
+  .hero .art::after{height:120px}
+  .plate{display:grid;grid-template-columns:auto auto 1fr;column-gap:24px;align-items:baseline;align-self:flex-start;margin:56px 0 0 calc(var(--gut) - 28px);padding:22px 28px 26px}
+  .title{display:contents}
+  .kick{grid-column:1/-1;grid-row:1}
+  .title h1{grid-column:1/-1;grid-row:2;font-size:128px;line-height:.95}
+  .when{grid-column:1;grid-row:3;display:flex;align-items:baseline;gap:6px}
+  .when .tm{font-weight:300;font-size:56px;color:var(--brown)}
+  .when .dot{display:none}
+  .when #hin{margin-left:12px}
+  .when #hin,.when #hcount{font-size:18px;white-space:nowrap}
+  .ar{grid-column:2;grid-row:3;font-size:48px}
+  .khatam{grid-column:3;grid-row:3}
+  .hdate{grid-column:1/-1;grid-row:4;margin-top:8px;font-size:20px;max-width:32ch}
+  .net{grid-column:1/-1;grid-row:5}
+
+  .body{display:flex;flex-wrap:wrap;padding:0}
+  /* today sits on ink in the light theme, on a lifted ink in the dark one */
+  .body>.today{flex:1 1 380px;padding:40px 40px 44px;--bg:#1D1F21;--ivory:#26292C;--ink:#F0E4C8;--brown:#C9BC9F;--muted:#A99D84;--rule:#3A3430;--accent:#F08A5D;--persimmon:#F08A5D;--fill:#F08A5D;--on-fill:#1D1F21;--focus:#F08A5D;background:var(--bg);color:var(--ink)}
+  :root[data-theme="dark"] .body>.today{--bg:#2A2D30}
+  .body>.today h2{font-family:var(--jost);font-weight:300;font-size:40px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+  .body>.today .date{font-family:var(--sora);font-size:18px;letter-spacing:0;text-transform:none}
+  .body>.today .extra{padding:10px 0 12px;margin:12px 0 6px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);font-size:16px}
+  .body>.today .pr{min-height:52px;border-bottom:1px solid var(--rule)}
+  .body>.today .pr.next{border-top:0}
+  .sun{flex:999 1 560px;min-width:0;margin:0;padding:40px 40px 44px;border-top:0}
+  .sun.night{margin:0;padding:40px 40px 44px}
+  .sun h2{font-family:var(--jost);font-weight:300;font-size:28px;letter-spacing:.08em}
+  .facts{grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-top:1px solid var(--ink)}
+  .facts>div{padding:14px 16px 0}
+  .facts>div:first-child{padding-left:0}
+  .facts>div+div{border-left:1px solid var(--rule)}
+  .qibla{grid-column:auto;border-top:0;padding-top:14px!important}
+  .facts>div:nth-child(2){padding-left:16px}
+  .facts dd.big{font-size:30px}
+
+  .five,.mtable{max-width:1600px;margin:0 auto;padding:48px 32px 0;flex-basis:100%}
+  .five h2,.mthead h2{font-family:var(--jost);font-weight:300;font-size:28px;letter-spacing:.08em;text-transform:uppercase}
+  .five h2{padding-bottom:12px;border-bottom:1px solid var(--ink)}
+  .five ul{list-style:none;padding:0;margin:20px 0 0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}
+  .five li.next .thl{color:var(--accent);font-weight:600}
+
+  .mtable{padding-bottom:0}
+  .mthead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--ink)}
+  .mthead h2{font-size:40px;letter-spacing:.06em}
+  /* the title and column heads pin under the top bar (sticky needs the table out of an overflow box) */
+  .tscroll{overflow:visible}
+  .mthead{position:sticky;top:var(--railh,0px);z-index:3;background:var(--bg);padding-top:12px}
+  .mtable thead th{position:sticky;top:calc(var(--railh,0px) + var(--mthh,0px));z-index:2;background:var(--bg);box-shadow:inset 0 -1px 0 var(--ink)}
+  /* earlier days fold behind one row; a chevron and the count say what opening it gives */
+  .mtable table:not(.open) tr.old{display:none}
+  .mtable tr.more{border-bottom:1px dashed var(--gold)}
+  .mtable tr.more td{padding:0;text-align:left}
+  .more button{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 8px;border:0;background:none;font-family:var(--jost);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brown);cursor:pointer}
+  .more button::before{content:"";width:7px;height:7px;border-right:1.4px solid currentColor;border-bottom:1.4px solid currentColor;transform:rotate(-135deg) translate(-2px,-2px);transition:transform .25s var(--ease)}
+  .more button[aria-expanded="true"]::before{transform:rotate(45deg)}
+  .mtable table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  .mtable thead th{padding:12px 8px;font-family:var(--jost);font-weight:400;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brown);text-align:right}
+  .mtable thead th:first-child,.mtable tbody th{text-align:left}
+  .mtable tbody th{padding:8px;font-weight:400;font-size:17px}
+  .mtable td{padding:8px;text-align:right;font-family:var(--jost);font-weight:300;font-size:16px}
+  .mtable tr{border-bottom:1px solid var(--rule)}
+  .mtable tr.past th,.mtable tr.past td{color:var(--muted)}
+  .mtable tr.today{background:var(--fill)}
+  .mtable tr.today th,.mtable tr.today td{color:var(--on-fill);font-weight:500}
+  .row-r{animation:rowr .4s var(--ease) both}.row-l{animation:rowl .4s var(--ease) both}
+  @keyframes rowr{from{opacity:0;transform:translateX(24px)}}@keyframes rowl{from{opacity:0;transform:translateX(-24px)}}
+  .body>.foot,.body>.seo{flex-basis:100%;max-width:1600px;margin-left:auto;margin-right:auto;padding-left:32px;padding-right:32px}
+  .body>.install{margin:16px 0 0 var(--gut)}
+  .body>.foot:first-of-type{margin-top:14px}
+
   .mini{display:none}
   .toast{top:76px}
-  .banner{height:200px}
-  .cwrap{max-width:640px}
-  .mbar{padding:32px 32px 0}
-  .mbody{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:48px;padding:16px 32px 0}
+  .banner{height:220px}
+  .banner .plate{margin-left:calc(var(--gut) - 14px)}
+  /* controls in a sticky left column, the cities in columns beside them */
+  .cwrap{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:56px;align-items:start;padding:28px var(--gut) 48px}
+  .cside{position:sticky;top:min(calc(var(--railh,0px) + 20px),calc(100vh - var(--sideh,0px) - 20px))}
+  .cpin{display:contents}
+  .crow{flex-direction:column;align-items:stretch;order:1}.gpsnote{order:2}.zone{order:3}.count{order:4}.provs{order:5;flex-direction:column;margin-top:6px}
+  .provs button{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:30px;padding:0;text-align:left;font-size:12px}
+  .provs button::before{left:9.5px;right:auto;top:0;bottom:0;width:1px;height:auto}
+  .provs button:first-child::before{left:9.5px;top:50%}.provs button:last-child::before{right:auto;bottom:50%}
+  .provs i{justify-self:center}.provs span{overflow:hidden;text-overflow:ellipsis}.provs small{display:block}.privacy{order:6}
+  .pcities{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .grp{top:calc(var(--railh,0px) - 16px);padding-top:30px} /* sticks 16px under the rail edge so rows never peek above it, without painting over the section before */
+  /* no match: the map fills the list column and runs on to the right edge of the screen */
+  .nm-band{margin:0 calc(-1 * var(--gut)) 0 0;height:min(calc((100vw - var(--gut) - 436px) * .404),62vh)} /* 436 = side column 380 + gap 56; .404 = map height/width */
+  .nomatch .empty{font-size:22px}
+  .city{min-height:44px;font-size:17px}
+  .mbar{padding:32px var(--gut) 0}
+  .mbody{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:48px;padding:16px var(--gut) 0}
   .mday{margin-top:28px;padding-top:0;border-top:0}
-  .src{margin:24px 32px 0}
+  .src{margin:24px var(--gut) 0}
+  .mlegend{margin:16px var(--gut) 0}
+  .mlight,.mskies{margin:44px var(--gut) 0}
+  .mlight h2,.mskies h2{font-weight:300;font-size:28px;letter-spacing:.08em}
+  #mlight{grid-template-columns:repeat(5,minmax(0,1fr));gap:0 28px}
+  .lchart{height:80px}
 }
 
 /* city pages and city lists (scripts/build-pages.mjs): plain text and the month table, for readers and search engines */
@@ -306,3 +596,4 @@ button:not(:disabled):active{transform:scale(.96)}
 .seo thead th{border-top:0;font-weight:600;font-size:12px}
 .pages{max-width:720px;margin:0 auto;padding:calc(var(--sat) + 16px) 20px 48px}
 .pages .seo{border-top:0}
+#mskies .thl{font-size:15px}
